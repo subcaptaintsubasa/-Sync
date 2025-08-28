@@ -2,9 +2,28 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>XISync - Tactical Canvas</title>
+    
+    <!-- PWA Manifest (Inline) -->
+    <link rel="manifest" href="data:application/manifest+json,{
+        &quot;name&quot;: &quot;XISync - Tactical Canvas&quot;,
+        &quot;short_name&quot;: &quot;XISync&quot;,
+        &quot;start_url&quot;: &quot;./soccer%20member.html&quot;,
+        &quot;display&quot;: &quot;standalone&quot;,
+        &quot;background_color&quot;: &quot;#e9e9e9&quot;,
+        &quot;theme_color&quot;: &quot;#007bff&quot;,
+        &quot;description&quot;: &quot;A web-based soccer tactical board application.&quot;,
+        &quot;icons&quot;: [
+            { &quot;src&quot;: &quot;data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3e%3ccircle cx='50' cy='50' r='48' fill='%23007bff' stroke='white' stroke-width='4' /%3e%3ctext x='50' y='60' font-size='40' fill='white' text-anchor='middle' font-family='sans-serif' font-weight='bold'%3eXI%3c/text%3e%3c/svg%3e&quot;, &quot;sizes&quot;: &quot;192x192&quot;, &quot;type&quot;: &quot;image/svg+xml&quot;, &quot;purpose&quot;: &quot;any maskable&quot; },
+            { &quot;src&quot;: &quot;data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3e%3ccircle cx='50' cy='50' r='48' fill='%23007bff' stroke='white' stroke-width='4' /%3e%3ctext x='50' y='60' font-size='40' fill='white' text-anchor='middle' font-family='sans-serif' font-weight='bold'%3eXI%3c/text%3e%3c/svg%3e&quot;, &quot;sizes&quot;: &quot;512x512&quot;, &quot;type&quot;: &quot;image/svg+xml&quot;, &quot;purpose&quot;: &quot;any maskable&quot; }
+        ]
+    }">
+
+    <meta name="theme-color" content="#007bff">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2248%22 fill=%22%23007bff%22 stroke=%22white%22 stroke-width=%224%22 /><text x=%2250%22 y=%2260%22 font-size=%2240%22 fill=%22white%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-weight=%22bold%22>XI</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2248%22 fill=%22%23007bff%22 stroke=%22white%22 stroke-width=%224%22 /><text x=%2250%22 y=%2260%22 font-size=%2240%22 fill=%22white' text-anchor='middle' font-family='sans-serif' font-weight='bold'%3eXI%3c/text%3e%3c/svg%3e">
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
     <style>
@@ -19,6 +38,7 @@
             font-family: 'Helvetica Neue', 'Arial', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Meiryo', sans-serif;
             margin: 0; background-color: #e9e9e9; color: var(--text-color);
             padding: 20px; box-sizing: border-box; min-height: 100vh; overflow-x: hidden;
+            touch-action: manipulation; /* Prevent double-tap zoom */
         }
 
         .container { display: flex; flex-wrap: wrap; gap: 20px; width: 100%; max-width: 1600px; margin: 0 auto; }
@@ -82,10 +102,10 @@
         .capture-watermark { display: none; }
         .is-capturing .capture-watermark { display: block; position: absolute; bottom: 10px; right: 15px; font-size: 14px; color: rgba(255, 255, 255, 0.7); text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
 
-        .player-container { position: absolute; display: flex; flex-direction: column; align-items: center; user-select: none; transform: translate(-50%, -50%); transition: transform 0.2s, box-shadow 0.2s; will-change: top, left, transform; border-radius: 50%; }
-        .player-container.is-moving { cursor: move; z-index: 100; transform: translate(-50%, -50%) scale(1.05); }
+        .player-container { position: absolute; display: flex; flex-direction: column; align-items: center; user-select: none; transform: translate(-50%, -50%); transition: top 0.3s ease, left 0.3s ease, transform 0.2s, box-shadow 0.2s; will-change: top, left, transform; border-radius: 50%; }
+        .player-container.is-moving { cursor: move; z-index: 100; transform: translate(-50%, -50%) scale(1.15); transition: transform 0.2s, box-shadow 0.2s; } /* No position transition while moving */
         .player-container.drop-target-hover { transform: translate(-50%, -50%) scale(1.15); }
-        .player-marker { width: 52px; height: 52px; border-radius: 50%; box-shadow: 0 3px 6px rgba(0,0,0,0.3); display: flex; flex-direction: column; justify-content: center; align-items: center; color: #333; font-weight: bold; border: 2px solid rgba(0,0,0,0.2); box-sizing: border-box; }
+        .player-marker { width: 52px; height: 52px; border-radius: 50%; box-shadow: 0 3px 6px rgba(0,0,0,0.3); display: flex; flex-direction: column; justify-content: center; align-items: center; color: #333; font-weight: bold; border: 2px solid rgba(0,0,0,0.2); box-sizing: border-box; touch-action: none; /* For smoother drag on touch */ }
         [data-drag-mode="position"] .player-marker { cursor: grab; }
         [data-drag-mode="swap"] .player-marker { cursor: pointer; }
         .player-marker.gk { background-color: var(--marker-gk-color); } .player-marker.df { background-color: var(--marker-df-color); color: white; }
@@ -96,7 +116,6 @@
         .unassign-btn:hover { background-color: #e74c3c; color: white; transform: scale(1.1); }
         .is-capturing .unassign-btn, .is-capturing .unassign-btn-sub { display: none; }
         
-        select { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; }
         button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background-color 0.3s, transform 0.1s; }
         button:active { transform: scale(0.98); }
         .btn-primary { background-color: var(--primary-color); color: white; } .btn-secondary { background-color: var(--secondary-color); color: white; } .btn-danger { background-color: var(--danger-color); color: white; }
@@ -107,10 +126,15 @@
         
         #player-list-controls { border: 1px solid #ddd; border-radius: 8px; padding: 15px; background-color: #fff; }
         
-        .player-list-item { display: flex; align-items: center; padding: 8px 10px; border-bottom: 1px solid #eee; cursor: grab; user-select: none; }
-        .player-list-item.is-assigned { background-color: #f0f0f0; color: #999; cursor: not-allowed; }
-        .player-list-item .num, .player-list-item .name { padding: 4px; } .player-list-item .num { font-weight: bold; width: 30px; }
-        .player-list-item .name { flex-grow: 1; }
+        .player-list-item { display: flex; align-items: center; padding: 8px 10px; border-bottom: 1px solid #eee; user-select: none; }
+        .player-list-item:not(.is-assigned) { cursor: grab; }
+        .player-list-item.is-assigned { background-color: #f0f0f0; color: #999; }
+        .player-list-item .num, .player-list-item .name { padding: 4px; } .player-list-item .num { font-weight: bold; width: 30px; text-align: right; margin-right: 5px;}
+        .player-list-item .name { flex-grow: 1; position: relative;}
+        .player-list-item.is-assigned .num, .player-list-item.is-assigned .name { color: #888; } /* Assigned players are greyed out */
+        .edit-player-btn { background: none; border: none; cursor: pointer; padding: 5px; width: auto; position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: #888; opacity: 0; transition: opacity 0.2s; }
+        .player-list-item:hover .edit-player-btn { opacity: 1; }
+        .edit-player-btn:hover { color: var(--primary-color); }
         
         .drag-ghost { position: absolute; left: -1000px; background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 2100; border-radius: 15px; padding: 5px 10px; font-size: 14px; display: inline-flex; align-items: center; }
         .drag-ghost .num { font-weight: bold; margin-right: 8px; }
@@ -141,6 +165,14 @@
         #edit-player-number::-webkit-outer-spin-button, #edit-player-number::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         #delete-player-btn-modal { display: flex; align-items: center; justify-content: center; gap: 8px; }
         #delete-player-btn-modal svg { width: 18px; height: 18px; }
+        
+        #formation-modal .modal-content { max-width: 600px; }
+        #formation-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
+        .formation-card { border: 2px solid #ddd; border-radius: 8px; padding: 15px; text-align: center; cursor: pointer; transition: all 0.2s ease; background-color: #fff; }
+        .formation-card:hover { border-color: var(--primary-color); transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .formation-card.selected { border-color: var(--primary-color); background-color: #e9f5ff; font-weight: bold; }
+        .formation-name { font-size: 1.1em; margin-bottom: 5px; }
+        .formation-note { font-size: 0.8em; color: #666; }
 
         .share-section { margin-bottom: 25px; }
         .share-section-title { font-weight: bold; margin-bottom: 10px; }
@@ -156,13 +188,13 @@
         .sidebar-header { padding: 15px 15px 10px 15px; border-bottom: 1px solid #eee; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
         .sidebar-header .title-bar { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         .sidebar-header h3 { margin: 0; font-size: 1.2em; }
-        .sidebar-header .edit-note { font-size: 0.8em; color: #666; }
         .sidebar-add-player { padding: 15px; border-bottom: 1px solid #eee; background-color: #f9f9f9; }
         .add-player-form { display: flex; gap: 8px; align-items: center; }
         .add-player-form input[type="number"] { width: 60px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; } 
         .add-player-form input[type="text"] { flex: 1; min-width: 0; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
         .add-player-form button { width: auto; flex-shrink: 0; font-size: 14px; padding: 8px 12px; }
         #sidebar-player-list { flex-grow: 1; overflow-y: auto; }
+        #sidebar-player-list.is-empty { padding: 20px; text-align: center; color: #888; }
 
         .mode-toggle-fab { position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px; background-color: var(--primary-color); color: white; border: none; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; display: flex; justify-content: center; align-items: center; z-index: 1000; transition: transform 0.2s, background-color 0.2s; }
         .mode-toggle-fab:hover { background-color: #0056b3; }
@@ -171,16 +203,95 @@
 
         .mode-toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background-color: rgba(0, 0, 0, 0.8); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; font-weight: bold; z-index: 3000; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; white-space: nowrap; }
         .mode-toast.show { opacity: 1; visibility: visible; }
+        
+        /* --- サイドバー操作改善のためのスタイル --- */
+        .container {
+            transition: padding-left 0.3s ease-in-out;
+        }
+        #player-list-sidebar.no-transition {
+            /* JSでドラッグ中に使用 */
+            transition: none;
+        }
+
+        .sidebar-handle {
+            position: fixed;
+            left: 0;
+            top: calc(50% - 50px);
+            width: 24px;
+            height: 100px;
+            background-color: var(--primary-color);
+            border: 2px solid white;
+            border-left: none;
+            border-radius: 0 12px 12px 0;
+            cursor: grab;
+            z-index: 1001;
+            transition: left 0.3s ease-in-out, background-color 0.2s;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .sidebar-handle:hover {
+            background-color: #0056b3;
+        }
+        .sidebar-handle::after {
+            content: '';
+            width: 4px;
+            height: 40px;
+            background-color: rgba(255,255,255,0.7);
+            border-radius: 2px;
+        }
+        body.sidebar-is-open .sidebar-handle {
+            left: -30px; /* 開いているときは隠す */
+        }
+
+        .pin-sidebar-btn {
+            width: auto;
+            height: auto;
+            background: #f0f0f0;
+            color: #333;
+            border: 1px solid #ccc;
+            border-radius: 50%;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 6px;
+            line-height: 1;
+            transition: all 0.2s;
+            display: none; /* スマホでは非表示 */
+        }
+        @media (hover: hover) and (pointer: fine) {
+            /* PC (ホバー可能デバイス) のみ表示 */
+            .pin-sidebar-btn { display: block; }
+        }
+        .pin-sidebar-btn:hover {
+            background-color: #e0e0e0;
+            transform: scale(1.1);
+        }
+        #player-list-sidebar.is-pinned .pin-sidebar-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+            transform: rotate(45deg);
+        }
+
+        .sidebar-header .title-bar {
+            /* ピンボタン配置のための調整 */
+            gap: 10px;
+        }
+        .sidebar-header .title-bar h3 {
+            margin-right: auto;
+        }
     </style>
 </head>
 <body data-layout-mode="vertical" data-drag-mode="swap">
+    <div class="sidebar-handle"></div>
     <div class="container">
         <div class="left-panel">
             <div id="player-management-section-left" class="control-group"></div>
         </div>
         
         <div class="main-content">
-            <input type="text" id="title-input" placeholder="スタメン予想">
+            <input type="text" id="title-input" placeholder="今日のスタメン">
             <div id="capture-area">
                 <div class="pitch-wrapper vertical" id="pitch-wrapper">
                     <div class="capture-title" id="capture-title"></div>
@@ -206,19 +317,7 @@
             </div>
             <div class="control-group">
                 <label>フォーメーション</label>
-                <select id="formation-select">
-                    <option value="4-3-3">4-3-3</option>
-                    <option value="4-4-2">4-4-2</option>
-                    <option value="4-2-3-1" selected>4-2-3-1</option>
-                    <option value="4-1-4-1">4-1-4-1</option>
-                    <option value="4-3-1-2">4-3-1-2 (ダイヤモンド)</option>
-                    <option value="4-3-2-1">4-3-2-1 (ツリー)</option>
-                    <option value="3-5-2">3-5-2</option>
-                    <option value="3-4-3">3-4-3</option>
-                    <option value="3-4-2-1">3-4-2-1</option>
-                    <option value="5-3-2">5-3-2</option>
-                    <option value="5-4-1">5-4-1</option>
-                </select>
+                <button id="open-formation-modal-btn" class="btn-secondary"></button>
             </div>
 
             <div id="player-management-section" class="control-group" style="gap: 25px;">
@@ -229,7 +328,7 @@
                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M15.78 4.33C15.42 4.08 15 4 14.56 4h-5.12c-.44 0-.82.08-1.18.33L3 7.84V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7.84l-5.22-3.51zM10 16H8v-2h2v2zm0-4H8v-2h2v2zm6 4h-2v-2h2v2zm0-4h-2v-2h2v2z"></path></svg>
                             <span>選手リストを開く</span>
                         </button>
-                        <button id="share-data-btn" class="btn-secondary" style="margin-top: 10px; font-size: 14px; padding: 10px;">選手リストを共有 / 読み込み</button>
+                        <button id="share-data-btn" class="btn-secondary" style="margin-top: 10px; font-size: 14px; padding: 10px;">リストを共有 / 読込</button>
                     </div>
                 </div>
                 <div class="control-group">
@@ -256,9 +355,8 @@
         <div class="sidebar-header">
             <div class="title-bar">
                 <h3>選手リスト</h3>
-                <button class="modal-close-btn" id="sidebar-close-btn">&times;</button>
+                <button class="pin-sidebar-btn" title="サイドバーを固定">📌</button>
             </div>
-            <span class="edit-note">長押し/ダブルクリックで編集</span>
         </div>
         <div class="sidebar-add-player">
             <div class="add-player-form">
@@ -269,10 +367,18 @@
         </div>
         <div id="sidebar-player-list"></div>
     </div>
+
+    <div class="modal-overlay" id="formation-modal">
+        <div class="modal-content">
+            <button class="modal-close-btn">&times;</button>
+            <h3>フォーメーションを選択</h3>
+            <div id="formation-grid"></div>
+        </div>
+    </div>
     
     <div class="modal-overlay" id="edit-player-modal">
         <div class="modal-content">
-            <button class="modal-close-btn" id="edit-modal-close-btn">&times;</button>
+            <button class="modal-close-btn">&times;</button>
             <h3>選手情報の編集</h3>
             <div style="display: flex; flex-direction: column; gap: 15px;">
                 <div class="form-group">
@@ -300,7 +406,7 @@
     
     <div class="modal-overlay" id="share-modal-overlay">
         <div class="modal-content">
-            <button class="modal-close-btn" id="modal-close-btn">&times;</button>
+            <button class="modal-close-btn">&times;</button>
             <h3>選手リストの共有 / 読み込み</h3>
             <div class="share-section">
                 <div class="share-section-title">リストを出力</div>
@@ -315,7 +421,7 @@
                 <div class="share-actions">
                     <button id="import-from-clipboard-btn" class="btn-primary">クリップボードから読込</button>
                     <label for="import-squad-input" class="btn-secondary">ファイルを選択して読込</label>
-                    <input type="file" id="import-squad-input" accept=".json">
+                    <input type="file" id="import-squad-input" accept=".json, .txt">
                 </div>
             </div>
         </div>
@@ -324,7 +430,7 @@
     <div class="modal-overlay" id="import-confirm-modal">
         <div class="modal-content">
             <h3>選手リストのインポート</h3>
-            <p>共有された以下の選手データで、現在のリストを上書きしますか？</p>
+            <p>共有された選手データで現在のリストを上書きしますか？配置はリセットされます。</p>
             <div id="import-preview-list" style="max-height: 200px; overflow-y: auto; border: 1px solid #eee; padding: 10px; margin-bottom: 20px; border-radius: 6px;">
             </div>
             <div style="display: flex; gap: 10px;">
@@ -340,553 +446,921 @@
     <div id="mode-toast" class="mode-toast"></div>
 
 <script>
+// --- PWA Service Worker Registration (Inline) ---
+if ('serviceWorker' in navigator) {
+    const serviceWorkerContent = `
+        const CACHE_NAME = 'xisync-cache-v2'; // Cache version updated
+        const urlsToCache = [
+            './soccer%20member.html', // URL encoded filename
+            'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js'
+        ];
+        self.addEventListener('install', event => {
+            event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache)));
+        });
+        self.addEventListener('fetch', event => {
+            event.respondWith(
+                caches.match(event.request).then(response => response || fetch(event.request))
+            );
+        });
+        self.addEventListener('activate', event => {
+            const cacheWhitelist = [CACHE_NAME];
+            event.waitUntil(
+                caches.keys().then(cacheNames => Promise.all(
+                    cacheNames.map(cacheName => {
+                        if (cacheWhitelist.indexOf(cacheName) === -1) {
+                            return caches.delete(cacheName);
+                        }
+                    })
+                ))
+            );
+        });
+    `;
+    const blob = new Blob([serviceWorkerContent], { type: 'application/javascript' });
+    navigator.serviceWorker.register(URL.createObjectURL(blob))
+        .then(reg => console.log('Service Worker registered successfully:', reg.scope))
+        .catch(err => console.log('Service Worker registration failed:', err));
+}
+
+
 document.addEventListener('DOMContentLoaded', () => {
-    // --- 要素取得 ---
-    const body = document.body;
-    const pitch = document.getElementById('pitch');
-    const pitchWrapper = document.getElementById('pitch-wrapper');
-    const formationSelect = document.getElementById('formation-select');
-    const saveImageBtn = document.getElementById('save-image-btn');
-    const dragGhost = document.getElementById('drag-ghost');
-    const orientationRadios = document.getElementsByName('orientation');
     
-    const playerManagementSection = document.getElementById('player-management-section');
-    const playerManagementSectionLeft = document.getElementById('player-management-section-left');
-    playerManagementSectionLeft.innerHTML = playerManagementSection.innerHTML;
+const App = {
+    els: {},
+    state: {
+        squad: [],
+        starters: {}, // { "posId": { playerId, coords }, ... }
+        substitutes: { GK: [], DF: [], MF: [], FW: [] },
+        config: {
+            orientation: 'vertical',
+            formation: '4-2-3-1',
+            dragMode: 'swap',
+            title: ''
+        },
+    },
 
-    const leftPanel = document.querySelector('.left-panel');
-    const rightPanel = document.querySelector('.right-panel');
+    editingPlayerId: null,
+    toastTimer: null,
+    numberChangeInterval: null,
+    _importedSquadData: null,
+    sidebarHoverTimer: null,
 
-    const leftPanelElements = {
-        subDropZones: leftPanel.querySelectorAll('.sub-drop-zone'),
-        shareDataBtn: leftPanel.querySelector('#share-data-btn'),
-        openSidebarBtn: leftPanel.querySelector('#open-sidebar-btn')
-    };
-    const rightPanelElements = {
-        subDropZones: rightPanel.querySelectorAll('#player-management-section .sub-drop-zone'),
-        shareDataBtn: rightPanel.querySelector('#share-data-btn'),
-        openSidebarBtn: rightPanel.querySelector('#open-sidebar-btn'),
-        resetAllBtn: document.getElementById('reset-all-btn')
-    };
+    init() {
+        this.cacheElements();
+        this.defineConstants();
+        this.clonePanels();
+        this.loadState();
+        this.checkUrlForSquadData();
+        this.buildFormationModal();
+        this.bindEvents();
+        this.renderAll();
+    },
 
-    const shareModalOverlay = document.getElementById('share-modal-overlay');
-    const modalCloseBtn = document.getElementById('modal-close-btn');
-    const copyUrlBtn = document.getElementById('copy-url-btn');
-    const copySquadBtn = document.getElementById('copy-squad-btn');
-    const exportSquadBtn = document.getElementById('export-squad-btn');
-    const importSquadInput = document.getElementById('import-squad-input');
-    const importFromClipboardBtn = document.getElementById('import-from-clipboard-btn');
+    cacheElements() {
+        const query = (selector) => document.querySelector(selector);
+        const queryAll = (selector) => document.querySelectorAll(selector);
+        this.els = {
+            body: document.body, pitch: query('#pitch'), pitchWrapper: query('#pitch-wrapper'),
+            saveImageBtn: query('#save-image-btn'), dragGhost: query('#drag-ghost'),
+            orientationRadios: document.getElementsByName('orientation'), titleInput: query('#title-input'),
+            playerManagementSectionLeft: query('#player-management-section-left'),
+            playerManagementSectionRight: query('#player-management-section'),
+            panels: {
+                left: { subDropZones: queryAll('.left-panel .sub-drop-zone') },
+                right: { openFormationModalBtn: query('.right-panel #open-formation-modal-btn'), subDropZones: queryAll('.right-panel .sub-drop-zone'), resetAllBtn: query('#reset-all-btn') }
+            },
+            shareModal: {
+                overlay: query('#share-modal-overlay'), copyUrlBtn: query('#copy-url-btn'),
+                copySquadBtn: query('#copy-squad-btn'), exportSquadBtn: query('#export-squad-btn'),
+                importSquadInput: query('#import-squad-input'), importFromClipboardBtn: query('#import-from-clipboard-btn')
+            },
+            sidebar: {
+                el: query('#player-list-sidebar'), list: query('#sidebar-player-list'),
+                addBtn: query('#sidebar-add-player-btn'), numberInput: query('#sidebar-new-player-number'),
+                nameInput: query('#sidebar-new-player-name')
+            },
+            editModal: {
+                overlay: query('#edit-player-modal'), numberInput: query('#edit-player-number'),
+                nameInput: query('#edit-player-name'), saveBtn: query('#save-player-changes-btn'),
+                deleteBtn: query('#delete-player-btn-modal'), incrementBtn: query('#increment-btn'), decrementBtn: query('#decrement-btn')
+            },
+            importConfirmModal: {
+                overlay: query('#import-confirm-modal'), previewList: query('#import-preview-list'),
+                confirmBtn: query('#confirm-import-btn'), cancelBtn: query('#cancel-import-btn')
+            },
+            formationModal: { overlay: query('#formation-modal'), grid: query('#formation-grid') },
+            modeToggleBtn: query('#mode-toggle-btn'), modeToast: query('#mode-toast'),
+            sidebarHandle: query('.sidebar-handle'),
+            pinSidebarBtn: query('.pin-sidebar-btn')
+        };
+        this.els.allModals = queryAll('.modal-overlay');
+        this.els.allCloseBtns = queryAll('.modal-close-btn');
+    },
+
+    defineConstants() {
+        this.formations = {'4-3-3':{name:'4-3-3',note:'',spec:[{pos:'GK'},{pos:'RSB'},{pos:'RCB'},{pos:'LCB'},{pos:'LSB'},{pos:'DMF'},{pos:'RCM'},{pos:'LCM'},{pos:'RWG'},{pos:'CF'},{pos:'LWG'}]},'4-4-2':{name:'4-4-2',note:'',spec:[{pos:'GK'},{pos:'RSB'},{pos:'RCB'},{pos:'LCB'},{pos:'LSB'},{pos:'RMF'},{pos:'CMF'},{pos:'CMF',isDuplicate:true},{pos:'LMF'},{pos:'FW'},{pos:'FW',isDuplicate:true}]},'4-2-3-1':{name:'4-2-3-1',note:'Standard',spec:[{pos:'GK'},{pos:'RSB'},{pos:'RCB'},{pos:'LCB'},{pos:'LSB'},{pos:'DMF'},{pos:'DMF',isDuplicate:true},{pos:'RMF'},{pos:'AMF'},{pos:'LMF'},{pos:'CF'}]},'4-1-4-1':{name:'4-1-4-1',note:'',spec:[{pos:'GK'},{pos:'RSB'},{pos:'RCB'},{pos:'LCB'},{pos:'LSB'},{pos:'DMF'},{pos:'RMF'},{pos:'RCM'},{pos:'LCM'},{pos:'LMF'},{pos:'CF'}]},'4-3-1-2':{name:'4-3-1-2',note:'Diamond',spec:[{pos:'GK'},{pos:'RSB'},{pos:'RCB'},{pos:'LCB'},{pos:'LSB'},{pos:'DMF'},{pos:'RCM'},{pos:'LCM'},{pos:'AMF'},{pos:'FW'},{pos:'FW',isDuplicate:true}]},'4-3-2-1':{name:'4-3-2-1',note:'Tree',spec:[{pos:'GK'},{pos:'RSB'},{pos:'RCB'},{pos:'LCB'},{pos:'LSB'},{pos:'RCM'},{pos:'CMF'},{pos:'LCM'},{pos:'RAM'},{pos:'LAM'},{pos:'CF'}]},'3-5-2':{name:'3-5-2',note:'',spec:[{pos:'GK'},{pos:'RCB'},{pos:'CB'},{pos:'LCB'},{pos:'RWB'},{pos:'RCM'},{pos:'DMF'},{pos:'LCM'},{pos:'LWB'},{pos:'FW'},{pos:'FW',isDuplicate:true}]},'3-4-3':{name:'3-4-3',note:'',spec:[{pos:'GK'},{pos:'RCB'},{pos:'CB'},{pos:'LCB'},{pos:'RMF'},{pos:'CMF'},{pos:'CMF',isDuplicate:true},{pos:'LMF'},{pos:'RWG'},{pos:'CF'},{pos:'LWG'}]},'3-4-2-1':{name:'3-4-2-1',note:'',spec:[{pos:'GK'},{pos:'RCB'},{pos:'CB'},{pos:'LCB'},{pos:'RWB'},{pos:'DMF'},{pos:'DMF',isDuplicate:true},{pos:'LWB'},{pos:'RAM'},{pos:'LAM'},{pos:'CF'}]},'5-3-2':{name:'5-3-2',note:'',spec:[{pos:'GK'},{pos:'RCB'},{pos:'CB'},{pos:'LCB'},{pos:'RWB'},{pos:'LWB'},{pos:'RCM'},{pos:'CMF'},{pos:'LCM'},{pos:'FW'},{pos:'FW',isDuplicate:true}]},'5-4-1':{name:'5-4-1',note:'',spec:[{pos:'GK'},{pos:'RSB'},{pos:'RCB'},{pos:'CB'},{pos:'LCB'},{pos:'LSB'},{pos:'RMF'},{pos:'RCM'},{pos:'LCM'},{pos:'LMF'},{pos:'CF'}]}};
+        this.formationCoords = {'4-3-3':[{top:50,left:8},{top:85,left:28},{top:65,left:25},{top:35,left:25},{top:15,left:28},{top:50,left:48},{top:70,left:60},{top:30,left:60},{top:80,left:80},{top:50,left:85},{top:20,left:80}],'4-4-2':[{top:50,left:8},{top:85,left:28},{top:65,left:25},{top:35,left:25},{top:15,left:28},{top:85,left:55},{top:60,left:50},{top:40,left:50},{top:15,left:55},{top:65,left:78},{top:35,left:78}],'4-2-3-1':[{top:50,left:8},{top:85,left:28},{top:65,left:25},{top:35,left:25},{top:15,left:28},{top:65,left:48},{top:35,left:48},{top:80,left:70},{top:50,left:72},{top:20,left:70},{top:50,left:88}],'4-1-4-1':[{top:50,left:8},{top:85,left:28},{top:65,left:25},{top:35,left:25},{top:15,left:28},{top:50,left:45},{top:85,left:65},{top:65,left:62},{top:35,left:62},{top:15,left:65},{top:50,left:85}],'4-3-1-2':[{top:50,left:8},{top:85,left:28},{top:65,left:25},{top:35,left:25},{top:15,left:28},{top:50,left:45},{top:75,left:55},{top:25,left:55},{top:50,left:70},{top:65,left:85},{top:35,left:85}],'4-3-2-1':[{top:50,left:8},{top:85,left:28},{top:65,left:25},{top:35,left:25},{top:15,left:28},{top:70,left:55},{top:50,left:50},{top:30,left:55},{top:65,left:75},{top:35,left:75},{top:50,left:88}],'3-5-2':[{top:50,left:8},{top:75,left:28},{top:50,left:25},{top:25,left:28},{top:90,left:55},{top:70,left:50},{top:50,left:42},{top:30,left:50},{top:10,left:55},{top:65,left:82},{top:35,left:82}],'3-4-3':[{top:50,left:8},{top:75,left:28},{top:50,left:25},{top:25,left:28},{top:85,left:58},{top:65,left:52},{top:35,left:52},{top:15,left:58},{top:80,left:80},{top:50,left:85},{top:20,left:80}],'3-4-2-1':[{top:50,left:8},{top:75,left:28},{top:50,left:25},{top:25,left:28},{top:85,left:58},{top:65,left:50},{top:35,left:50},{top:15,left:58},{top:65,left:78},{top:35,left:78},{top:50,left:88}],'5-3-2':[{top:50,left:8},{top:75,left:28},{top:50,left:25},{top:25,left:28},{top:90,left:35},{top:10,left:35},{top:75,left:60},{top:50,left:55},{top:25,left:60},{top:65,left:82},{top:35,left:82}],'5-4-1':[{top:50,left:8},{top:90,left:28},{top:70,left:25},{top:50,left:22},{top:30,left:25},{top:10,left:28},{top:85,left:58},{top:60,left:52},{top:40,left:52},{top:15,left:58},{top:50,left:82}]};
+        this.svgIcons = {position:'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 1.707V5.5a.5.5 0 0 1-1 0V1.707L6.354 2.854a.5.5 0 1 1-.708-.708l2-2zM8 10a.5.5 0 0 1 .5.5v3.793l1.146-1.147a.5.5 0 0 1 .708.708l-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 0 1 .708-.708L7.5 14.293V10.5A.5.5 0 0 1 8 10zM.146 8.354a.5.5 0 0 1 0-.708l2-2a.5.5 0 1 1 .708.708L1.707 7.5H5.5a.5.5 0 0 1 0 1H1.707l1.147 1.146a.5.5 0 0 1-.708.708l-2-2zM10 8a.5.5 0 0 1 .5-.5h3.793l-1.147-1.146a.5.5 0 0 1 .708-.708l2 2a.5.5 0 0 1 0 .708l-2 2a.5.5 0 0 1-.708-.708L14.293 8.5H10.5A.5.5 0 0 1 10 8z"/></svg>',swap:'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1 11.5a.5.5 0 0 0 .5.5h11.793l-1.147 1.146a.5.5 0 0 0 .708.708l2-2a.5.5 0 0 0 0-.708l-2-2a.5.5 0 0 0-.708.708L13.293 11H1.5a.5.5 0 0 0-.5.5zm14-7a.5.5 0 0 1-.5.5H2.707l1.147 1.146a.5.5 0 1 1-.708.708l-2-2a.5.5 0 0 1 0-.708l2-2a.5.5 0 1 1 .708.708L2.707 4H14.5a.5.5 0 0 1 .5.5z"/></svg>'};
+    },
+
+    clonePanels() {
+        this.els.playerManagementSectionLeft.innerHTML = this.els.playerManagementSectionRight.innerHTML;
+        this.cacheElements(); 
+        this.els.allShareBtns = document.querySelectorAll('#share-data-btn');
+        this.els.allOpenSidebarBtns = document.querySelectorAll('#open-sidebar-btn');
+    },
     
-    const playerListSidebar = document.getElementById('player-list-sidebar');
-    const sidebarPlayerList = document.getElementById('sidebar-player-list');
-    const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
-    const sidebarAddPlayerBtn = document.getElementById('sidebar-add-player-btn');
-    const sidebarNewPlayerNumberInput = document.getElementById('sidebar-new-player-number');
-    const sidebarNewPlayerNameInput = document.getElementById('sidebar-new-player-name');
+    bindEvents() {
+        // --- サイドバー以外のイベントリスナー ---
+        [...this.els.orientationRadios].forEach(radio => radio.addEventListener('change', e => { this.state.config.orientation = e.target.value; this.renderAll(); }));
+        this.els.allShareBtns.forEach(btn => btn.addEventListener('click', () => this.openModal(this.els.shareModal.overlay)));
+        if (this.els.panels.right.resetAllBtn) this.els.panels.right.resetAllBtn.addEventListener('click', this.resetAllAssignments.bind(this));
+        if (this.els.panels.right.openFormationModalBtn) this.els.panels.right.openFormationModalBtn.addEventListener('click', () => { this.buildFormationModal(); this.openModal(this.els.formationModal.overlay); });
 
-    const editPlayerModal = document.getElementById('edit-player-modal');
-    const editModalCloseBtn = document.getElementById('edit-modal-close-btn');
-    const editPlayerNumberInput = document.getElementById('edit-player-number');
-    const editPlayerNameInput = document.getElementById('edit-player-name');
-    const savePlayerChangesBtn = document.getElementById('save-player-changes-btn');
-    const deletePlayerBtnModal = document.getElementById('delete-player-btn-modal');
-    const incrementBtn = document.getElementById('increment-btn');
-    const decrementBtn = document.getElementById('decrement-btn');
+        this.els.sidebar.addBtn.addEventListener('click', this.addPlayer.bind(this));
+        this.els.sidebar.nameInput.addEventListener('keypress', e => e.key === 'Enter' && this.addPlayer());
+
+        this.els.allModals.forEach(modal => modal.addEventListener('click', e => e.target === modal && this.closeAllModals()));
+        this.els.allCloseBtns.forEach(btn => btn.addEventListener('click', this.closeAllModals.bind(this)));
+
+        this.els.editModal.saveBtn.addEventListener('click', this.savePlayerChanges.bind(this));
+        this.els.editModal.deleteBtn.addEventListener('click', this.deletePlayerFromModal.bind(this));
+        this.els.editModal.incrementBtn.addEventListener('click', () => this.changeNumber(1));
+        this.els.editModal.decrementBtn.addEventListener('click', () => this.changeNumber(-1));
+        ['mousedown', 'touchstart'].forEach(evt => {
+            this.els.editModal.incrementBtn.addEventListener(evt, () => this.numberChangeInterval = setInterval(() => this.changeNumber(1), 100));
+            this.els.editModal.decrementBtn.addEventListener(evt, () => this.numberChangeInterval = setInterval(() => this.changeNumber(-1), 100));
+        });
+        ['mouseup', 'mouseleave', 'touchend'].forEach(evt => {
+            document.addEventListener(evt, () => clearInterval(this.numberChangeInterval));
+        });
+
+        this.els.shareModal.copyUrlBtn.addEventListener('click', this.copySquadUrlToClipboard.bind(this));
+        this.els.shareModal.copySquadBtn.addEventListener('click', this.copySquadToClipboard.bind(this));
+        this.els.shareModal.exportSquadBtn.addEventListener('click', this.exportSquadToFile.bind(this));
+        this.els.shareModal.importSquadInput.addEventListener('change', this.importFromFile.bind(this));
+        this.els.shareModal.importFromClipboardBtn.addEventListener('click', this.importFromClipboard.bind(this));
+        
+        this.els.importConfirmModal.confirmBtn.addEventListener('click', this.confirmImport.bind(this));
+        this.els.importConfirmModal.cancelBtn.addEventListener('click', () => { this.closeAllModals(); history.replaceState(null, '', window.location.pathname); });
+
+        this.els.modeToggleBtn.addEventListener('click', this.toggleDragMode.bind(this));
+        this.els.saveImageBtn.addEventListener('click', this.saveImage.bind(this));
+
+        document.querySelectorAll('.sub-drop-zone').forEach(zone => {
+            zone.addEventListener('dragover', this.handleDragOver.bind(this));
+            zone.addEventListener('dragleave', this.handleDragLeave.bind(this));
+            zone.addEventListener('drop', this.handleDropOnSubZone.bind(this));
+        });
+        
+        let titleSaveTimeout;
+        this.els.titleInput.addEventListener('input', () => { clearTimeout(titleSaveTimeout); titleSaveTimeout = setTimeout(() => this.saveState(), 500); });
+        
+        // --- 新しいサイドバー操作のセットアップ ---
+        this.setupSidebarControls();
+    },
     
-    const importConfirmModal = document.getElementById('import-confirm-modal');
-    const importPreviewList = document.getElementById('import-preview-list');
-    const confirmImportBtn = document.getElementById('confirm-import-btn');
-    const cancelImportBtn = document.getElementById('cancel-import-btn');
-    
-    const modeToggleBtn = document.getElementById('mode-toggle-btn');
-    const modeToast = document.getElementById('mode-toast');
-    const svgIcons = {
-        position: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 1.707V5.5a.5.5 0 0 1-1 0V1.707L6.354 2.854a.5.5 0 1 1-.708-.708l2-2zM8 10a.5.5 0 0 1 .5.5v3.793l1.146-1.147a.5.5 0 0 1 .708.708l-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 0 1 .708-.708L7.5 14.293V10.5A.5.5 0 0 1 8 10zM.146 8.354a.5.5 0 0 1 0-.708l2-2a.5.5 0 1 1 .708.708L1.707 7.5H5.5a.5.5 0 0 1 0 1H1.707l1.147 1.146a.5.5 0 0 1-.708.708l-2-2zM10 8a.5.5 0 0 1 .5-.5h3.793l-1.147-1.146a.5.5 0 0 1 .708-.708l2 2a.5.5 0 0 1 0 .708l-2 2a.5.5 0 0 1-.708-.708L14.293 8.5H10.5A.5.5 0 0 1 10 8z"/></svg>`,
-        swap: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1 11.5a.5.5 0 0 0 .5.5h11.793l-1.147 1.146a.5.5 0 0 0 .708.708l2-2a.5.5 0 0 0 0-.708l-2-2a.5.5 0 0 0-.708.708L13.293 11H1.5a.5.5 0 0 0-.5.5zm14-7a.5.5 0 0 1-.5.5H2.707l1.147 1.146a.5.5 0 1 1-.708.708l-2-2a.5.5 0 0 1 0-.708l2-2a.5.5 0 1 1 .708.708L2.707 4H14.5a.5.5 0 0 1 .5.5z"/></svg>`
-    };
-    
-    // --- データ管理 ---
-    let squad = [];
-    let starters = {};
-    let substitutes = { GK: [], DF: [], MF: [], FW: [] };
-    let currentOrientation = 'vertical';
-    let currentDragMode = 'swap';
-    let longPressTimer;
-    let isDragging = false;
-    let editingPlayerId = null;
-    let toastTimer;
-    let numberChangeInterval = null;
+    saveState() {
+        this.state.config.title = this.els.titleInput.value;
+        localStorage.setItem("xisyncAppState", JSON.stringify(this.state));
+    },
 
-    const formations = { 
-        '4-3-3':    [ { pos: 'GK'}, { pos: 'RSB'}, { pos: 'RCB'}, { pos: 'LCB'}, { pos: 'LSB'}, { pos: 'DMF'}, { pos: 'RCM'}, { pos: 'LCM'}, { pos: 'RWG'}, { pos: 'CF'}, { pos: 'LWG'} ],
-        '4-4-2':    [ { pos: 'GK'}, { pos: 'RSB'}, { pos: 'RCB'}, { pos: 'LCB'}, { pos: 'LSB'}, { pos: 'RMF'}, { pos: 'CMF'}, { pos: 'CMF', isDuplicate: true }, { pos: 'LMF'}, { pos: 'FW'}, { pos: 'FW', isDuplicate: true } ],
-        '4-2-3-1':  [ { pos: 'GK'}, { pos: 'RSB'}, { pos: 'RCB'}, { pos: 'LCB'}, { pos: 'LSB'}, { pos: 'DMF'}, { pos: 'DMF', isDuplicate: true }, { pos: 'RMF'}, { pos: 'AMF'}, { pos: 'LMF'}, { pos: 'CF'} ],
-        '4-1-4-1':  [ { pos: 'GK'}, { pos: 'RSB'}, { pos: 'RCB'}, { pos: 'LCB'}, { pos: 'LSB'}, { pos: 'DMF'}, { pos: 'RMF'}, { pos: 'RCM'}, { pos: 'LCM'}, { pos: 'LMF'}, { pos: 'CF'} ],
-        '4-3-1-2':  [ { pos: 'GK'}, { pos: 'RSB'}, { pos: 'RCB'}, { pos: 'LCB'}, { pos: 'LSB'}, { pos: 'DMF'}, { pos: 'RCM'}, { pos: 'LCM'}, { pos: 'AMF'}, { pos: 'FW'}, { pos: 'FW', isDuplicate: true } ],
-        '4-3-2-1':  [ { pos: 'GK'}, { pos: 'RSB'}, { pos: 'RCB'}, { pos: 'LCB'}, { pos: 'LSB'}, { pos: 'RCM'}, { pos: 'CMF'}, { pos: 'LCM'}, { pos: 'RAM'}, { pos: 'LAM'}, { pos: 'CF'} ],
-        '3-5-2':    [ { pos: 'GK'}, { pos: 'RCB'}, { pos: 'CB'}, { pos: 'LCB'}, { pos: 'RWB'}, { pos: 'RCM'}, { pos: 'DMF'}, { pos: 'LCM'}, { pos: 'LWB'}, { pos: 'FW'}, { pos: 'FW', isDuplicate: true } ],
-        '3-4-3':    [ { pos: 'GK'}, { pos: 'RCB'}, { pos: 'CB'}, { pos: 'LCB'}, { pos: 'RMF'}, { pos: 'CMF'}, { pos: 'CMF', isDuplicate: true }, { pos: 'LMF'}, { pos: 'RWG'}, { pos: 'CF'}, { pos: 'LWG'} ],
-        '3-4-2-1':  [ { pos: 'GK'}, { pos: 'RCB'}, { pos: 'CB'}, { pos: 'LCB'}, { pos: 'RWB'}, { pos: 'DMF'}, { pos: 'DMF', isDuplicate: true }, { pos: 'LWB'}, { pos: 'RAM'}, { pos: 'LAM'}, { pos: 'CF'} ],
-        '5-3-2':    [ { pos: 'GK'}, { pos: 'RCB'}, { pos: 'CB'}, { pos: 'LCB'}, { pos: 'RWB'}, { pos: 'LWB'}, { pos: 'RCM'}, { pos: 'CMF'}, { pos: 'LCM'}, { pos: 'FW'}, { pos: 'FW', isDuplicate: true } ],
-        '5-4-1':    [ { pos: 'GK'}, { pos: 'RSB'}, { pos: 'RCB'}, { pos: 'CB'}, { pos: 'LCB'}, { pos: 'LSB'}, { pos: 'RMF'}, { pos: 'RCM'}, { pos: 'LCM'}, { pos: 'LMF'}, { pos: 'CF'} ]
-    };
-    const formationCoords = {
-        '4-3-3':    [ { top: 50, left: 8 }, { top: 85, left: 28 }, { top: 65, left: 25 }, { top: 35, left: 25 }, { top: 15, left: 28 }, { top: 50, left: 48 }, { top: 70, left: 60 }, { top: 30, left: 60 }, { top: 80, left: 80 }, { top: 50, left: 85 }, { top: 20, left: 80 } ],
-        '4-4-2':    [ { top: 50, left: 8 }, { top: 85, left: 28 }, { top: 65, left: 25 }, { top: 35, left: 25 }, { top: 15, left: 28 }, { top: 85, left: 55 }, { top: 60, left: 50 }, { top: 40, left: 50 }, { top: 15, left: 55 }, { top: 65, left: 78 }, { top: 35, left: 78 } ],
-        '4-2-3-1':  [ { top: 50, left: 8 }, { top: 85, left: 28 }, { top: 65, left: 25 }, { top: 35, left: 25 }, { top: 15, left: 28 }, { top: 65, left: 48 }, { top: 35, left: 48 }, { top: 80, left: 70 }, { top: 50, left: 72 }, { top: 20, left: 70 }, { top: 50, left: 88 } ],
-        '4-1-4-1':  [ { top: 50, left: 8 }, { top: 85, left: 28 }, { top: 65, left: 25 }, { top: 35, left: 25 }, { top: 15, left: 28 }, { top: 50, left: 45 }, { top: 85, left: 65 }, { top: 65, left: 62 }, { top: 35, left: 62 }, { top: 15, left: 65 }, { top: 50, left: 85 } ],
-        '4-3-1-2':  [ { top: 50, left: 8 }, { top: 85, left: 28 }, { top: 65, left: 25 }, { top: 35, left: 25 }, { top: 15, left: 28 }, { top: 50, left: 45 }, { top: 75, left: 55 }, { top: 25, left: 55 }, { top: 50, left: 70 }, { top: 65, left: 85 }, { top: 35, left: 85 } ],
-        '4-3-2-1':  [ { top: 50, left: 8 }, { top: 85, left: 28 }, { top: 65, left: 25 }, { top: 35, left: 25 }, { top: 15, left: 28 }, { top: 70, left: 55 }, { top: 50, left: 50 }, { top: 30, left: 55 }, { top: 65, left: 75 }, { top: 35, left: 75 }, { top: 50, left: 88 } ],
-        '3-5-2':    [ { top: 50, left: 8 }, { top: 75, left: 28 }, { top: 50, left: 25 }, { top: 25, left: 28 }, { top: 90, left: 55 }, { top: 70, left: 50 }, { top: 50, left: 42 }, { top: 30, left: 50 }, { top: 10, left: 55 }, { top: 65, left: 82 }, { top: 35, left: 82 } ],
-        '3-4-3':    [ { top: 50, left: 8 }, { top: 75, left: 28 }, { top: 50, left: 25 }, { top: 25, left: 28 }, { top: 85, left: 58 }, { top: 65, left: 52 }, { top: 35, left: 52 }, { top: 15, left: 58 }, { top: 80, left: 80 }, { top: 50, left: 85 }, { top: 20, left: 80 } ],
-        '3-4-2-1':  [ { top: 50, left: 8 }, { top: 75, left: 28 }, { top: 50, left: 25 }, { top: 25, left: 28 }, { top: 85, left: 58 }, { top: 65, left: 50 }, { top: 35, left: 50 }, { top: 15, left: 58 }, { top: 65, left: 78 }, { top: 35, left: 78 }, { top: 50, left: 88 } ],
-        '5-3-2':    [ { top: 50, left: 8 }, { top: 75, left: 28 }, { top: 50, left: 25 }, { top: 25, left: 28 }, { top: 90, left: 35 }, { top: 10, left: 35 }, { top: 75, left: 60 }, { top: 50, left: 55 }, { top: 25, left: 60 }, { top: 65, left: 82 }, { top: 35, left: 82 } ],
-        '5-4-1':    [ { top: 50, left: 8 }, { top: 90, left: 28 }, { top: 70, left: 25 }, { top: 50, left: 22 }, { top: 30, left: 25 }, { top: 10, left: 28 }, { top: 85, left: 58 }, { top: 60, left: 52 }, { top: 40, left: 52 }, { top: 15, left: 58 }, { top: 50, left: 82 } ]
-    };
-
-    function renderAll() { renderFormation(formationSelect.value); renderPlayerList(); renderSubstitutes(); }
-
-    function renderPlayerList() {
-        sidebarPlayerList.innerHTML = '';
-        const assignedPlayerIds = new Set([...Object.values(starters).map(s => s.playerId), ...Object.values(substitutes).flat()]);
-        squad.sort((a, b) => a.number - b.number).forEach(player => {
-            const isAssigned = assignedPlayerIds.has(player.id);
-            const playerEl = document.createElement('div');
-            playerEl.className = `player-list-item ${isAssigned ? 'is-assigned' : ''}`;
-            playerEl.dataset.playerId = player.id;
-            playerEl.innerHTML = `<span class="num">${player.number}</span> <span class="name">${player.name}</span>`;
-            
-            if (!isAssigned) {
-                playerEl.draggable = true;
-                playerEl.addEventListener('dragstart', (e) => handleDragStartFromList(e, player.id));
+    loadState() {
+        const savedStateJSON = localStorage.getItem("xisyncAppState");
+        if (savedStateJSON) {
+            try {
+                const savedState = JSON.parse(savedStateJSON);
+                Object.assign(this.state, savedState);
+                this.state.config = {
+                    ...{ orientation: "vertical", formation: "4-2-3-1", dragMode: "swap", title: "" },
+                    ...savedState.config
+                };
+                this.state.substitutes = savedState.substitutes || { GK: [], DF: [], MF: [], FW: [] };
+            } catch (e) {
+                console.error("Failed to load state:", e);
             }
-            playerEl.addEventListener('mousedown', (e) => handleMouseDown(e, player.id));
-            playerEl.addEventListener('mouseup', handleMouseUp);
-            playerEl.addEventListener('mouseleave', handleMouseUp);
-            playerEl.addEventListener('mousemove', handleMouseMove);
-            playerEl.addEventListener('touchstart', (e) => handleMouseDown(e, player.id), { passive: true });
-            playerEl.addEventListener('touchend', handleMouseUp);
-            playerEl.addEventListener('touchmove', handleMouseMove);
-            playerEl.addEventListener('dblclick', (e) => { clearTimeout(longPressTimer); handleMouseUp(); openEditModal(player.id); });
+        }
+    },
 
-            sidebarPlayerList.appendChild(playerEl);
-        });
-    }
+    updateUI() {
+        this.els.titleInput.value = this.state.config.title;
+        document.querySelector(`input[name="orientation"][value="${this.state.config.orientation}"]`).checked = true;
+        this.els.body.dataset.layoutMode = this.state.config.orientation;
+        this.els.body.dataset.dragMode = this.state.config.dragMode;
+        this.els.panels.right.openFormationModalBtn.textContent = this.formations[this.state.config.formation].name;
+        this.els.modeToggleBtn.innerHTML = this.svgIcons[this.state.config.dragMode];
+    },
 
-    function renderSubstitutes() {
-        [leftPanelElements.subDropZones, rightPanelElements.subDropZones].forEach(zones => {
-            zones.forEach(zone => {
-                zone.innerHTML = '';
-                const category = zone.dataset.posCategory;
-                substitutes[category].forEach(playerId => {
-                    const player = squad.find(p => p.id === playerId);
-                    if (!player) return;
-                    const subEl = document.createElement('div');
-                    subEl.className = 'substitute-item';
-                    subEl.dataset.playerId = playerId;
-                    subEl.draggable = true;
-                    subEl.addEventListener('dragstart', (e) => handleDragStartFromSub(e, playerId));
-                    subEl.innerHTML = `<span class="num">${player.number}</span><span class="name">${player.name}</span><button class="unassign-btn-sub">&times;</button>`;
-                    subEl.querySelector('.unassign-btn-sub').addEventListener('click', (e) => {
-                        e.stopPropagation(); unassignPlayer(playerId); renderAll();
-                    });
-                    zone.appendChild(subEl);
-                });
-            });
-        });
-    }
+    renderAll() {
+        this.updateUI();
+        this.renderFormation();
+        this.renderPlayerList();
+        this.renderSubstitutes();
+        this.saveState();
+    },
 
-    function renderFormation(formation) {
-        pitchWrapper.className = `pitch-wrapper ${currentOrientation}`;
-        pitch.innerHTML = `<div class="pitch-line center-line"></div><div class="pitch-line center-circle"></div><div class="pitch-line goal-area"></div><div class="pitch-line penalty-area"></div><div class="pitch-line penalty-arc"></div><div class="pitch-line goal"></div>`;
-        const formationData = formations[formation];
-        const coordsData = formationCoords[formation];
-        formationData.forEach((data, index) => {
-            const posId = `${data.pos}_${data.isDuplicate ? index : 1}`;
-            createPlayerMarker(data, coordsData[index], posId);
-        });
-    }
-    
-    function getRole(pos) {
-        if (pos === 'GK') return 'gk';
-        if (['B', 'SB', 'CB'].some(p => pos.includes(p))) return 'df';
-        if (['MF', 'WB'].some(p => pos.includes(p))) return 'mf';
-        return 'fw'; // Default fallback for FW, WG, etc.
-    }
-
-    function createPlayerMarker(data, defaultCoords, posId) {
-        const container = document.createElement('div');
-        container.className = 'player-container';
-        container.dataset.posId = posId;
+    renderFormation() {
+        this.els.pitchWrapper.className = `pitch-wrapper ${this.state.config.orientation}`;
+        this.els.pitch.innerHTML = '<div class="pitch-line center-line"></div><div class="pitch-line center-circle"></div><div class="pitch-line goal-area"></div><div class="pitch-line penalty-area"></div><div class="pitch-line penalty-arc"></div><div class="pitch-line goal"></div>';
         
-        const starterInfo = starters[posId];
-        const coordsToUse = starterInfo?.coords ?? defaultCoords;
+        const formationSpec = this.formations[this.state.config.formation].spec;
+        const formationCoords = this.formationCoords[this.state.config.formation];
         
-        if (currentOrientation === 'vertical') {
-            container.style.top = `${100 - (coordsToUse.left * 0.9)}%`;
-            container.style.left = `${coordsToUse.top}%`;
+        formationSpec.forEach((spec, index) => {
+            const posId = `${spec.pos}_${spec.isDuplicate ? index : 1}`;
+            this.createPlayerMarker(spec, formationCoords[index], posId);
+        });
+    },
+
+    createPlayerMarker(posSpec, defaultCoords, posId) {
+        const markerEl = document.createElement('div');
+        markerEl.className = 'player-container';
+        markerEl.dataset.posId = posId;
+
+        const starter = this.state.starters[posId];
+        const currentCoords = starter?.coords ?? defaultCoords;
+
+        if (this.state.config.orientation === 'vertical') {
+            markerEl.style.top = `${100 - (currentCoords.left * 0.9)}%`;
+            markerEl.style.left = `${currentCoords.top}%`;
         } else {
-            container.style.top = `${coordsToUse.top}%`;
-            container.style.left = `${coordsToUse.left * 0.9}%`;
+            markerEl.style.top = `${currentCoords.top}%`;
+            markerEl.style.left = `${currentCoords.left * 0.9}%`;
         }
 
-        const player = starterInfo ? squad.find(p => p.id === starterInfo.playerId) : null;
-        const role = getRole(data.pos);
-        
-        container.innerHTML = `<div class="player-marker ${role}"><span class="player-number">${player?.number ?? ''}</span><span class="player-pos">${data.pos}</span></div><div class="player-name">${player?.name ?? data.pos}</div>`;
-        
-        container.addEventListener('dragover', handleDragOver);
-        container.addEventListener('dragleave', handleDragLeave);
-        container.addEventListener('drop', (e) => handleDropOnPitch(e, posId));
-        
+        const player = starter ? this.state.squad.find(p => p.id === starter.playerId) : null;
+        const role = this.getRole(posSpec.pos);
+
+        markerEl.innerHTML = `
+            <div class="player-marker ${role}">
+                <span class="player-number">${player?.number ?? ''}</span>
+                <span class="player-pos">${posSpec.pos}</span>
+            </div>
+            <div class="player-name">${player?.name ?? posSpec.pos}</div>`;
+            
+        markerEl.addEventListener('dragover', this.handleDragOver.bind(this));
+        markerEl.addEventListener('dragleave', this.handleDragLeave.bind(this));
+        markerEl.addEventListener('drop', (e) => this.handleDropOnPitch(e, posId));
+
         if (player) {
-            if (currentDragMode === 'position') {
-                makeMarkerMovable(container);
-                container.draggable = false;
+            if (this.state.config.dragMode === 'position') {
+                this.makeMarkerMovable(markerEl);
+                markerEl.draggable = false;
             } else {
-                container.draggable = true;
-                container.addEventListener('dragstart', (e) => handleDragStartFromPitch(e, posId, player.id));
+                markerEl.draggable = true;
+                markerEl.addEventListener('dragstart', (e) => this.handleDragStart(e, { type: 'pitch', posId: posId, playerId: player.id }));
             }
             const unassignBtn = document.createElement('button');
-            unassignBtn.innerHTML = '&times;'; unassignBtn.className = 'unassign-btn';
-            unassignBtn.addEventListener('click', (e) => { e.stopPropagation(); unassignPlayer(player.id); renderAll(); });
-            container.appendChild(unassignBtn);
+            unassignBtn.innerHTML = '&times;';
+            unassignBtn.className = 'unassign-btn';
+            unassignBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.unassignPlayer(player.id);
+                this.renderAll();
+            });
+            markerEl.appendChild(unassignBtn);
         }
-        pitch.appendChild(container);
-    }
+        this.els.pitch.appendChild(markerEl);
+    },
     
-    function handleDragStartFromList(e, playerId) { setupDrag(e, { type: 'list', playerId }); }
-    function handleDragStartFromPitch(e, posId, playerId) { setupDrag(e, { type: 'pitch', posId, playerId }); }
-    function handleDragStartFromSub(e, playerId) { setupDrag(e, { type: 'substitute', playerId }); }
-    
-    function setupDrag(e, sourceInfo) {
-        e.dataTransfer.setData('application/json', JSON.stringify(sourceInfo));
+    getRole(pos) {
+        if (pos === 'GK') return 'gk';
+        if (['B', 'SB', 'CB'].some(p => pos.includes(p))) return 'df';
+        if (['MF', 'WB', 'AM', 'CM', 'DM'].some(p => pos.includes(p))) return 'mf';
+        return 'fw';
+    },
+
+    makeMarkerMovable(marker) {
+        const handleMouseDown = (e) => {
+            if (e.target.tagName !== 'DIV' || !e.target.classList.contains('player-marker')) return;
+            marker.classList.add('is-moving');
+
+            const handleMouseMove = (moveEvent) => {
+                const pitchRect = this.els.pitch.getBoundingClientRect();
+                const newLeft = Math.max(0, Math.min(100, (moveEvent.clientX - pitchRect.left) / pitchRect.width * 100));
+                const newTop = Math.max(0, Math.min(100, (moveEvent.clientY - pitchRect.top) / pitchRect.height * 100));
+                marker.style.left = `${newLeft}%`;
+                marker.style.top = `${newTop}%`;
+            };
+            const handleMouseUp = () => {
+                marker.classList.remove('is-moving');
+                document.removeEventListener('mousemove', handleMouseMove);
+                
+                const posId = marker.dataset.posId;
+                const newLeftPercent = parseFloat(marker.style.left);
+                const newTopPercent = parseFloat(marker.style.top);
+                
+                if (this.state.config.orientation === 'vertical') {
+                    this.state.starters[posId].coords = { top: newLeftPercent, left: (100 - newTopPercent) / 0.9 };
+                } else {
+                    this.state.starters[posId].coords = { top: newTopPercent, left: newLeftPercent / 0.9 };
+                }
+                this.saveState();
+            };
+            
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp, { once: true });
+        };
+        marker.addEventListener('mousedown', handleMouseDown);
+    },
+
+    renderPlayerList() {
+        const listContainer = this.els.sidebar.list;
+        listContainer.innerHTML = '';
+        if (this.state.squad.length === 0) {
+            listContainer.className = 'is-empty';
+            listContainer.textContent = '上のフォームから選手を追加してください。';
+            return;
+        }
+        listContainer.className = '';
+
+        const assignedPlayerIds = new Set([
+            ...Object.values(this.state.starters).map(s => s.playerId),
+            ...Object.values(this.state.substitutes).flat()
+        ]);
+        
+        this.state.squad.sort((a, b) => a.number - b.number).forEach(player => {
+            const isAssigned = assignedPlayerIds.has(player.id);
+            const itemEl = document.createElement('div');
+            itemEl.className = `player-list-item ${isAssigned ? 'is-assigned' : ''}`;
+            itemEl.dataset.playerId = player.id;
+            itemEl.innerHTML = `
+                <span class="num">${player.number}</span>
+                <div class="name">
+                    <span>${player.name}</span>
+                    <button class="edit-player-btn" title="編集">✏️</button>
+                </div>`;
+            
+            // Assign edit button event regardless of assignment status
+            itemEl.querySelector('.edit-player-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.openEditModal(player.id);
+            });
+
+            // Make draggable only if not assigned
+            if (!isAssigned) {
+                itemEl.draggable = true;
+                itemEl.addEventListener('dragstart', (e) => this.handleDragStart(e, { type: 'list', playerId: player.id }));
+            }
+
+            // Add Double-click event for PC
+            itemEl.addEventListener('dblclick', () => {
+                this.openEditModal(player.id);
+            });
+
+            // Add Long-press event for Touch devices
+            let longPressTimer;
+            const startLongPress = (e) => {
+                // Prevent interfering with edit button clicks
+                if (e.target.closest('.edit-player-btn')) return;
+                longPressTimer = setTimeout(() => {
+                    navigator.vibrate?.(50);
+                    this.openEditModal(player.id);
+                    longPressTimer = null; // Prevent re-triggering
+                }, 500); // 500ms for long press
+            };
+            const cancelLongPress = () => {
+                clearTimeout(longPressTimer);
+            };
+            itemEl.addEventListener('touchstart', startLongPress, { passive: true });
+            itemEl.addEventListener('touchend', cancelLongPress);
+            itemEl.addEventListener('touchmove', cancelLongPress);
+
+
+            listContainer.appendChild(itemEl);
+        });
+    },
+
+    renderSubstitutes() {
+        document.querySelectorAll('.sub-drop-zone').forEach(zone => {
+            zone.innerHTML = '';
+            const category = zone.dataset.posCategory;
+            (this.state.substitutes[category] || []).forEach(playerId => {
+                const player = this.state.squad.find(p => p.id === playerId);
+                if (!player) return;
+                const subItem = document.createElement('div');
+                subItem.className = 'substitute-item';
+                subItem.dataset.playerId = playerId;
+                subItem.draggable = true;
+                subItem.addEventListener('dragstart', (e) => this.handleDragStart(e, { type: 'substitute', playerId, category }));
+                subItem.innerHTML = `
+                    <span class="num">${player.number}</span>
+                    <span class="name">${player.name}</span>
+                    <button class="unassign-btn-sub">&times;</button>`;
+                subItem.querySelector('.unassign-btn-sub').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.unassignPlayer(playerId);
+                    this.renderAll();
+                });
+                zone.appendChild(subItem);
+            });
+        });
+    },
+
+    handleDragStart(e, data) {
+        e.dataTransfer.setData('application/json', JSON.stringify(data));
         e.dataTransfer.effectAllowed = 'move';
-        const player = squad.find(p => p.id === sourceInfo.playerId);
+        const player = this.state.squad.find(p => p.id === data.playerId);
         if (player) {
-            dragGhost.innerHTML = `<span class="num">${player.number}</span><span class="name">${player.name}</span>`;
-            e.dataTransfer.setDragImage(dragGhost, 15, 15);
+            this.els.dragGhost.innerHTML = `<span class="num">${player.number}</span><span class="name">${player.name}</span>`;
+            e.dataTransfer.setDragImage(this.els.dragGhost, 15, 15);
         }
         e.stopPropagation();
-        if (playerListSidebar.classList.contains('is-open')) {
-            playerListSidebar.classList.remove('is-open');
+        if (this.els.sidebar.el.classList.contains('is-open')) {
+            this.closeSidebar(true);
         }
-    }
+    },
 
-    function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drop-target-hover'); }
-    function handleDragLeave(e) { e.currentTarget.classList.remove('drop-target-hover'); }
+    handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drop-target-hover'); },
+    handleDragLeave(e) { e.currentTarget.classList.remove('drop-target-hover'); },
 
-    function handleDropOnPitch(e, targetPosId) {
+    handleDropOnPitch(e, targetPosId) {
         e.preventDefault(); e.stopPropagation();
         e.currentTarget.classList.remove('drop-target-hover');
+        const data = JSON.parse(e.dataTransfer.getData('application/json'));
+        const draggedPlayerId = data.playerId;
+        const playerOnTarget = this.state.starters[targetPosId]?.playerId;
         
-        const sourceInfo = JSON.parse(e.dataTransfer.getData('application/json'));
-        const sourcePlayerId = sourceInfo.playerId;
-        const targetPlayerId = starters[targetPosId]?.playerId;
+        if (draggedPlayerId === playerOnTarget) return;
 
-        if (sourcePlayerId === targetPlayerId) return;
+        this.unassignPlayer(draggedPlayerId);
         
-        if (sourceInfo.type === 'substitute') {
-            unassignPlayer(sourcePlayerId); // from subs
-            if (targetPlayerId) {
-                const pos = targetPosId.split('_')[0];
-                const targetPlayerRole = getRole(pos).toUpperCase();
-                unassignPlayer(targetPlayerId); // from starters
-                substitutes[targetPlayerRole].push(targetPlayerId);
+        if (playerOnTarget) {
+            this.unassignPlayer(playerOnTarget);
+            if (data.type === 'pitch') {
+                this.state.starters[data.posId] = { playerId: playerOnTarget, coords: this.state.starters[data.posId]?.coords || null };
+            } else {
+                const posName = targetPosId.split('_')[0];
+                const role = this.getRole(posName).toUpperCase();
+                this.state.substitutes[role].push(playerOnTarget);
             }
-            starters[targetPosId] = { playerId: sourcePlayerId, coords: starters[targetPosId]?.coords || null };
+        }
+        
+        this.state.starters[targetPosId] = { playerId: draggedPlayerId, coords: this.state.starters[targetPosId]?.coords || null };
+        this.renderAll();
+    },
 
+    handleDropOnSubZone(e) {
+        e.preventDefault(); e.stopPropagation();
+        const zone = e.currentTarget;
+        zone.classList.remove('drop-target-hover');
+        const data = JSON.parse(e.dataTransfer.getData('application/json'));
+        this.unassignPlayer(data.playerId);
+        this.state.substitutes[zone.dataset.posCategory].push(data.playerId);
+        this.renderAll();
+    },
+
+    unassignPlayer(playerId) {
+        for (const posId in this.state.starters) {
+            if (this.state.starters[posId]?.playerId === playerId) {
+                delete this.state.starters[posId];
+                return;
+            }
+        }
+        for (const category in this.state.substitutes) {
+            this.state.substitutes[category] = (this.state.substitutes[category] || []).filter(id => id !== playerId);
+        }
+    },
+
+    addPlayer() {
+        const number = this.els.sidebar.numberInput.value;
+        const name = this.els.sidebar.nameInput.value.trim();
+        if (!number || !name) { alert('背番号と選手名を入力してください。'); return; }
+        if (this.state.squad.some(p => p.number === parseInt(number))) { alert('この背番号は既に使用されています。'); return; }
+        this.state.squad.push({ id: `p_${Date.now()}`, number: parseInt(number), name });
+        this.els.sidebar.numberInput.value = '';
+        this.els.sidebar.nameInput.value = '';
+        this.els.sidebar.numberInput.focus();
+        this.renderAll();
+    },
+
+    resetAllAssignments() {
+        if (confirm('すべての選手の配置をリセットしますか？')) {
+            this.state.starters = {};
+            this.state.substitutes = { GK: [], DF: [], MF: [], FW: [] };
+            this.renderAll();
+        }
+    },
+    
+    openModal(modalEl) { modalEl.style.display = 'flex'; },
+    closeAllModals() {
+        this.els.allModals.forEach(modal => modal.style.display = 'none');
+        clearInterval(this.numberChangeInterval);
+    },
+
+    buildFormationModal() {
+        this.els.formationModal.grid.innerHTML = '';
+        for (const key in this.formations) {
+            const formation = this.formations[key];
+            const card = document.createElement('div');
+            card.className = 'formation-card';
+            card.dataset.formation = key;
+            card.innerHTML = `<div class="formation-name">${formation.name}</div><div class="formation-note">${formation.note || '&nbsp;'}</div>`;
+            if (key === this.state.config.formation) card.classList.add('selected');
+            card.addEventListener('click', () => {
+                this.changeFormation(key);
+                this.closeAllModals();
+            });
+            this.els.formationModal.grid.appendChild(card);
+        }
+    },
+
+    changeFormation(newFormationKey) {
+        const oldStarters = { ...this.state.starters };
+        this.state.starters = {};
+
+        const newPositions = this.formations[newFormationKey].spec.map((spec, index) => {
+            const posId = `${spec.pos}_${spec.isDuplicate ? index : 1}`;
+            const coords = this.formationCoords[newFormationKey][index];
+            const characteristics = this.getPositionCharacteristics(spec.pos, coords);
+            return { posId, pos: spec.pos, characteristics, isAssigned: false };
+        });
+
+        Object.values(oldStarters).forEach(starterData => {
+            const player = this.state.squad.find(p => p.id === starterData.playerId);
+            if (!player) return;
+
+            let bestMatch = null;
+            let bestScore = -Infinity;
+
+            const oldPosId = Object.keys(oldStarters).find(key => oldStarters[key].playerId === starterData.playerId);
+            const oldPosName = oldPosId ? oldPosId.split('_')[0] : '';
+            const oldFormationKey = this.state.config.formation;
+            const oldPosIndex = this.formations[oldFormationKey].spec.findIndex((spec, i) => `${spec.pos}_${spec.isDuplicate ? i : 1}` === oldPosId);
+            const oldCoords = (oldPosIndex !== -1) ? this.formationCoords[oldFormationKey][oldPosIndex] : { top: 50, left: 50 };
+            const oldCharacteristics = this.getPositionCharacteristics(oldPosName, oldCoords);
+
+            newPositions.forEach(newPos => {
+                if (newPos.isAssigned) return;
+                const score = this.calculatePositionSimilarity(oldCharacteristics, newPos.characteristics);
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestMatch = newPos;
+                }
+            });
+
+            if (bestMatch) {
+                this.state.starters[bestMatch.posId] = { playerId: starterData.playerId, coords: null };
+                bestMatch.isAssigned = true;
+            } else {
+                const role = this.getRole(oldPosName).toUpperCase();
+                if (!this.state.substitutes[role]) this.state.substitutes[role] = [];
+                this.state.substitutes[role].push(starterData.playerId);
+            }
+        });
+        
+        this.state.config.formation = newFormationKey;
+        this.renderAll();
+    },
+
+    getPositionCharacteristics(posName, coords) {
+        let role = 'GENERIC';
+        if (posName === 'GK') role = 'GK';
+        else if (posName.includes('CB')) role = 'CB';
+        else if (posName.includes('SB')) role = 'SB';
+        else if (posName.includes('WB')) role = 'WB';
+        else if (posName.includes('DMF') || posName.includes('CMF')) role = 'CM';
+        else if (posName.includes('AMF')) role = 'AM';
+        else if (posName.includes('WG') || posName.includes('MF')) role = 'WM';
+        else if (posName.includes('FW') || posName.includes('CF')) role = 'FW';
+        
+        let side = 'Center';
+        if (posName.startsWith('R') || coords.top > 60) side = 'Right';
+        if (posName.startsWith('L') || coords.top < 40) side = 'Left';
+        
+        let vertical = 'Mid';
+        if (coords.left < 35) vertical = 'Def';
+        if (coords.left > 75) vertical = 'Fwd';
+        
+        return { role, side, vertical, x: coords.top, y: coords.left };
+    },
+
+    calculatePositionSimilarity(char1, char2) {
+        let score = 0;
+        if (char1.role === char2.role) {
+            score += 100;
         } else {
-            unassignPlayer(sourcePlayerId);
-            if (targetPlayerId) { unassignPlayer(targetPlayerId); }
-    
-            starters[targetPosId] = { playerId: sourcePlayerId, coords: starters[targetPosId]?.coords || null };
-            if (targetPlayerId && sourceInfo.type === 'pitch') {
-                 starters[sourceInfo.posId] = { playerId: targetPlayerId, coords: starters[sourceInfo.posId]?.coords || null };
-            }
+            const similarRoles = { 'SB': ['WB'], 'WB': ['SB', 'WM'], 'CM': ['AM'], 'AM': ['CM', 'FW'], 'WM': ['FW', 'WB'] };
+            if (similarRoles[char1.role]?.includes(char2.role)) score += 50;
         }
-        renderAll();
-    }
-    
-    function makeMarkerMovable(container) {
-        const onMouseDown = (e) => {
-            if (e.target.tagName !== 'DIV' || !e.target.classList.contains('player-marker')) return;
-            container.classList.add('is-moving');
-            const onMouseMove = (moveEvent) => {
-                const pitchRect = pitch.getBoundingClientRect();
-                let newLeft = Math.max(0, Math.min(100, (moveEvent.clientX - pitchRect.left) / pitchRect.width * 100));
-                let newTop = Math.max(0, Math.min(100, (moveEvent.clientY - pitchRect.top) / pitchRect.height * 100));
-                container.style.left = `${newLeft}%`; container.style.top = `${newTop}%`;
-            };
-            const onMouseUp = () => {
-                container.classList.remove('is-moving');
-                document.removeEventListener('mousemove', onMouseMove);
-                const posId = container.dataset.posId;
-                const currentLeftPerc = parseFloat(container.style.left);
-                const currentTopPerc = parseFloat(container.style.top);
+        if (char1.side === char2.side) score += 20;
+        if (char1.vertical === char2.vertical) score += 10;
+        
+        const distance = Math.sqrt(Math.pow(char1.x - char2.x, 2) + Math.pow(char1.y - char2.y, 2));
+        score -= distance;
+        return score;
+    },
 
-                if (currentOrientation === 'vertical') {
-                    starters[posId].coords = { top: currentLeftPerc, left: (100 - currentTopPerc) / 0.9 };
-                } else {
-                    starters[posId].coords = { top: currentTopPerc, left: currentLeftPerc / 0.9 };
-                }
-            };
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp, { once: true });
-        };
-        container.addEventListener('mousedown', onMouseDown);
-    }
-    
-    function unassignPlayer(playerId) {
-        for (const posId in starters) { if (starters[posId]?.playerId === playerId) { delete starters[posId]; return; } }
-        for (const category in substitutes) { substitutes[category] = substitutes[category].filter(id => id !== playerId); }
-    }
-    
-    function addPlayer() { 
-        const number = sidebarNewPlayerNumberInput.value; 
-        const name = sidebarNewPlayerNameInput.value.trim(); 
-        if (!number || !name) { alert('背番号と選手名を入力してください。'); return; } 
-        squad.push({ id: `p_${Date.now()}`, number: parseInt(number), name: name }); 
-        sidebarNewPlayerNumberInput.value = ''; 
-        sidebarNewPlayerNameInput.value = ''; 
-        sidebarNewPlayerNumberInput.focus(); 
-        saveSquadToLocalStorage(); 
-        renderAll(); 
-    }
-    
-    function deletePlayer(playerId) {
-        if (confirm('この選手をリストから削除しますか？配置もリセットされます。')) {
-            squad = squad.filter(p => p.id !== playerId);
-            unassignPlayer(playerId);
-            saveSquadToLocalStorage(); renderAll();
-        }
-    }
-    
-    function handleMouseDown(e, playerId) { isDragging = false; longPressTimer = setTimeout(() => { if (!isDragging) { openEditModal(playerId); } }, 500); }
-    function handleMouseUp() { clearTimeout(longPressTimer); }
-    function handleMouseMove() { isDragging = true; clearTimeout(longPressTimer); }
-
-    function openEditModal(playerId) {
-        const player = squad.find(p => p.id === playerId);
+    openEditModal(playerId) {
+        const player = this.state.squad.find(p => p.id === playerId);
         if (!player) return;
-        editingPlayerId = playerId;
-        editPlayerNumberInput.value = player.number;
-        editPlayerNameInput.value = player.name;
-        editPlayerModal.style.display = 'flex';
-    }
+        this.editingPlayerId = playerId;
+        this.els.editModal.numberInput.value = player.number;
+        this.els.editModal.nameInput.value = player.name;
+        this.openModal(this.els.editModal.overlay);
+    },
 
-    function closeEditModal() { 
-        clearInterval(numberChangeInterval);
-        editPlayerModal.style.display = 'none'; 
-        editingPlayerId = null; 
-    }
-
-    savePlayerChangesBtn.addEventListener('click', () => {
-        if (!editingPlayerId) return;
-        const player = squad.find(p => p.id === editingPlayerId);
+    savePlayerChanges() {
+        if (!this.editingPlayerId) return;
+        const player = this.state.squad.find(p => p.id === this.editingPlayerId);
         if (player) {
-            player.number = parseInt(editPlayerNumberInput.value, 10) || player.number;
-            player.name = editPlayerNameInput.value.trim() || player.name;
-            saveSquadToLocalStorage(); 
-            renderAll();
-        }
-        closeEditModal();
-    });
-    
-    deletePlayerBtnModal.addEventListener('click', () => {
-        if(editingPlayerId) {
-            deletePlayer(editingPlayerId);
-            closeEditModal();
-        }
-    });
-
-    const changeNumber = (amount) => {
-        let currentValue = parseInt(editPlayerNumberInput.value, 10) || 0;
-        let newValue = currentValue + amount;
-        if (newValue < 1) newValue = 1;
-        editPlayerNumberInput.value = newValue;
-    };
-    
-    const stopInterval = () => clearInterval(numberChangeInterval);
-
-    incrementBtn.addEventListener('click', () => changeNumber(1));
-    decrementBtn.addEventListener('click', () => changeNumber(-1));
-
-    incrementBtn.addEventListener('mousedown', () => { numberChangeInterval = setInterval(() => changeNumber(1), 100); });
-    decrementBtn.addEventListener('mousedown', () => { numberChangeInterval = setInterval(() => changeNumber(-1), 100); });
-    
-    ['mouseup', 'mouseleave', 'touchend'].forEach(event => {
-        incrementBtn.addEventListener(event, stopInterval);
-        decrementBtn.addEventListener(event, stopInterval);
-    });
-
-
-    function saveSquadToLocalStorage() { localStorage.setItem('tacticalCanvasSquad', JSON.stringify(squad)); }
-    function loadSquadFromLocalStorage() { const savedSquad = localStorage.getItem('tacticalCanvasSquad'); squad = savedSquad ? JSON.parse(savedSquad) : []; }
-    
-    function openShareModal() { shareModalOverlay.style.display = 'flex'; }
-    function closeShareModal() { shareModalOverlay.style.display = 'none'; }
-    
-    function copySquadUrlToClipboard() {
-        if (squad.length === 0) { alert('共有する選手がいません。'); return; }
-        try {
-            const jsonString = JSON.stringify(squad);
-            const compressedData = LZString.compressToEncodedURIComponent(jsonString);
-            const baseUrl = window.location.href.split('?')[0].split('#')[0];
-            const shareUrl = `${baseUrl}?data=${compressedData}`;
-
-            navigator.clipboard.writeText(shareUrl).then(() => {
-                alert('共有用URLをクリップボードにコピーしました！');
-                closeShareModal();
-            }).catch(err => alert('URLのコピーに失敗しました。'));
-        } catch (e) {
-            alert('URLの生成に失敗しました。');
-        }
-    }
-
-    function copySquadToClipboard() { if (squad.length === 0) { alert('コピーする選手がいません。'); return; } navigator.clipboard.writeText(JSON.stringify(squad)).then(() => { alert('クリップボードにコピーしました！'); closeShareModal(); }).catch(() => alert('コピーに失敗しました。')); }
-    function exportSquadToFile() { if (squad.length === 0) { alert('エクスポートする選手がいません。'); return; } const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(squad)); const downloadAnchorNode = document.createElement('a'); downloadAnchorNode.setAttribute("href", dataStr); downloadAnchorNode.setAttribute("download", "squad.json"); document.body.appendChild(downloadAnchorNode); downloadAnchorNode.click(); downloadAnchorNode.remove(); closeShareModal(); }
-    
-    function processImport(squadData) { if (Array.isArray(squadData) && squadData.every(p => p.id && typeof p.number !== 'undefined' && p.name)) { squad = squadData; starters = {}; substitutes = { GK: [], DF: [], MF: [], FW: [] }; saveSquadToLocalStorage(); renderAll(); alert(`${squad.length}人の選手をインポートしました。`); closeShareModal(); } else { alert('無効なデータ形式です。'); } }
-    function importFromFile(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (e) => { try { processImport(JSON.parse(e.target.result)); } catch (error) { alert('ファイルの読み込みに失敗しました。'); } }; reader.readAsText(file); event.target.value = ''; }
-    async function importFromClipboard() { try { const text = await navigator.clipboard.readText(); if (text) { processImport(JSON.parse(text)); } else { alert('クリップボードが空です。'); } } catch (error) { alert('クリップボードの読み込みに失敗しました。'); } }
-
-    function checkUrlForSquadData() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const data = urlParams.get('data');
-
-        if (data) {
-            try {
-                const decompressedData = LZString.decompressFromEncodedURIComponent(data);
-                const importedSquad = JSON.parse(decompressedData);
-
-                if (Array.isArray(importedSquad) && importedSquad.every(p => p.id && typeof p.number !== 'undefined' && p.name)) {
-                    importPreviewList.innerHTML = '<ul style="list-style: none; padding: 0;">' + importedSquad.sort((a,b) => a.number - b.number).map(p => `<li><strong>No.${p.number}</strong> ${p.name}</li>`).join('') + '</ul>';
-                    importConfirmModal.style.display = 'flex';
-
-                    confirmImportBtn.onclick = () => {
-                        squad = importedSquad;
-                        starters = {}; substitutes = { GK: [], DF: [], MF: [], FW: [] };
-                        saveSquadToLocalStorage(); renderAll();
-                        alert(`${squad.length}人の選手をインポートしました。`);
-                        closeImportConfirmModal();
-                        history.replaceState(null, '', window.location.pathname);
-                    };
-
-                    cancelImportBtn.onclick = () => {
-                        closeImportConfirmModal();
-                        history.replaceState(null, '', window.location.pathname);
-                    };
-                } else {
-                    history.replaceState(null, '', window.location.pathname);
-                }
-            } catch (e) {
-                history.replaceState(null, '', window.location.pathname);
+            const newNumber = parseInt(this.els.editModal.numberInput.value, 10);
+            const newName = this.els.editModal.nameInput.value.trim();
+            if (this.state.squad.some(p => p.number === newNumber && p.id !== player.id)) {
+                alert('その背番号は既に使用されています。'); return;
             }
+            player.number = newNumber || player.number;
+            player.name = newName || player.name;
+            this.renderAll();
         }
-    }
-    function closeImportConfirmModal() { importConfirmModal.style.display = 'none'; }
+        this.closeAllModals();
+    },
+
+    deletePlayerFromModal() {
+        if (this.editingPlayerId && confirm('この選手をリストから完全に削除しますか？\nこの操作は元に戻せません。')) {
+            this.unassignPlayer(this.editingPlayerId);
+            this.state.squad = this.state.squad.filter(p => p.id !== this.editingPlayerId);
+            this.closeAllModals();
+            this.renderAll();
+        }
+    },
     
-    saveImageBtn.addEventListener('click', () => {
-        let subListHtml = '';
-        ['GK', 'DF', 'MF', 'FW'].forEach(cat => { if (substitutes[cat].length > 0) { const names = substitutes[cat].map(id => squad.find(p => p.id === id)).filter(Boolean).map(p => `${p.number} ${p.name}`).join(' / '); subListHtml += `<div class="subs-pos-group"><span class="pos-label">${cat}:</span><span class="names">${names}</span></div>`; } });
+    changeNumber(amount) {
+        let currentNum = parseInt(this.els.editModal.numberInput.value, 10) || 0;
+        let newNum = currentNum + amount;
+        if (newNum < 1) newNum = 1;
+        this.els.editModal.numberInput.value = newNum;
+    },
+
+    toggleDragMode() {
+        this.state.config.dragMode = this.state.config.dragMode === 'position' ? 'swap' : 'position';
+        this.showModeToast();
+        this.renderAll();
+    },
+
+    showModeToast() {
+        clearTimeout(this.toastTimer);
+        this.els.modeToast.textContent = this.state.config.dragMode === 'swap' ? '選手交代モード' : 'マーカー移動モード';
+        this.els.modeToast.classList.add('show');
+        this.toastTimer = setTimeout(() => { this.els.modeToast.classList.remove('show'); }, 1500);
+    },
+    
+    saveImage() {
+        let subsHTML = '';
+        ['GK', 'DF', 'MF', 'FW'].forEach(pos => {
+            if (this.state.substitutes[pos] && this.state.substitutes[pos].length > 0) {
+                const names = this.state.substitutes[pos]
+                    .map(id => this.state.squad.find(p => p.id === id))
+                    .filter(Boolean)
+                    .map(p => `${p.number} ${p.name}`).join(' / ');
+                subsHTML += `<div class="subs-pos-group"><span class="pos-label">${pos}:</span><span class="names">${names}</span></div>`;
+            }
+        });
         const captureSubs = document.getElementById('capture-subs');
-        captureSubs.innerHTML = subListHtml ? `<h4>SUBSTITUTES</h4><div class="subs-grid">${subListHtml}</div>` : '';
+        captureSubs.innerHTML = subsHTML ? `<h4>SUBSTITUTES</h4><div class="subs-grid">${subsHTML}</div>` : '';
+
         const captureTitle = document.getElementById('capture-title');
-        const titleInput = document.getElementById('title-input');
+        const titleInput = this.els.titleInput;
         captureTitle.textContent = titleInput.value || titleInput.placeholder;
         captureTitle.style.display = 'block';
-
+        
         const watermark = document.getElementById('capture-watermark');
         watermark.textContent = "Created with XISync";
-        
+
         const captureArea = document.getElementById('capture-area');
         captureArea.classList.add('is-capturing');
 
         html2canvas(captureArea, { backgroundColor: '#4a8d4d', scale: 3 }).then(canvas => {
             const link = document.createElement('a');
-            link.download = `${(titleInput.value || 'tactical-canvas').replace(/\s/g, '_')}.png`;
+            const fileName = (titleInput.value || 'tactical-canvas').replace(/[\\/:"*?<>|]/g, '').replace(/\s+/g, '_');
+            link.download = `${fileName}.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
         }).finally(() => {
             captureArea.classList.remove('is-capturing');
             captureTitle.style.display = 'none';
         });
-    });
+    },
     
-    function updateModeToggleBtn() {
-        modeToggleBtn.innerHTML = svgIcons[currentDragMode];
-    }
-    
-    function showModeToast() {
-        clearTimeout(toastTimer);
-        modeToast.textContent = (currentDragMode === 'swap') ? '選手交代モード' : 'マーカー移動モード';
-        modeToast.classList.add('show');
-        toastTimer = setTimeout(() => {
-            modeToast.classList.remove('show');
-        }, 1500);
-    }
-
-    // --- イベントリスナー設定 ---
-    orientationRadios.forEach(radio => radio.addEventListener('change', (e) => { currentOrientation = e.target.value; body.dataset.layoutMode = currentOrientation; renderAll(); }));
-    formationSelect.addEventListener('change', () => { starters = {}; renderAll(); });
-    
-    sidebarAddPlayerBtn.addEventListener('click', addPlayer);
-    sidebarNewPlayerNameInput.addEventListener('keypress', (e) => e.key === 'Enter' && addPlayer());
-    
-    [leftPanelElements, rightPanelElements].forEach(elements => {
-        elements.subDropZones.forEach(zone => {
-            zone.addEventListener('dragover', handleDragOver);
-            zone.addEventListener('dragleave', handleDragLeave);
-            zone.addEventListener('drop', (e) => {
-                e.preventDefault(); e.stopPropagation();
-                e.currentTarget.classList.remove('drop-target-hover');
-                const sourceInfo = JSON.parse(e.dataTransfer.getData('application/json'));
-                unassignPlayer(sourceInfo.playerId);
-                substitutes[zone.dataset.posCategory].push(sourceInfo.playerId);
-                renderAll();
-            });
-        });
-        elements.shareDataBtn.addEventListener('click', openShareModal);
-        elements.openSidebarBtn.addEventListener('click', () => playerListSidebar.classList.add('is-open'));
-    });
-    
-    rightPanelElements.resetAllBtn.addEventListener('click', () => {
-        if(confirm('すべての選手の配置をリセットしますか？')){
-            starters = {};
-            substitutes = { GK: [], DF: [], MF: [], FW: [] };
-            renderAll();
+    checkUrlForSquadData() {
+        const dataParam = new URLSearchParams(window.location.search).get('data');
+        if (dataParam) {
+            try {
+                const decompressed = LZString.decompressFromEncodedURIComponent(dataParam);
+                const squadData = JSON.parse(decompressed);
+                if (this.isValidSquad(squadData)) {
+                    this.showImportConfirmation(squadData);
+                }
+            } catch (error) {
+                console.error('URL Data Error:', error);
+                history.replaceState(null, '', window.location.pathname);
+            }
         }
-    });
-
-    modeToggleBtn.addEventListener('click', () => {
-        currentDragMode = (currentDragMode === 'position') ? 'swap' : 'position';
-        body.dataset.dragMode = currentDragMode;
-        updateModeToggleBtn();
-        showModeToast();
-        renderAll();
-    });
-
-    modalCloseBtn.addEventListener('click', closeShareModal);
-    shareModalOverlay.addEventListener('click', (e) => e.target === shareModalOverlay && closeShareModal());
-    copyUrlBtn.addEventListener('click', copySquadUrlToClipboard);
-    copySquadBtn.addEventListener('click', copySquadToClipboard);
-    exportSquadBtn.addEventListener('click', exportSquadToFile);
-    importSquadInput.addEventListener('change', importFromFile);
-    importFromClipboardBtn.addEventListener('click', importFromClipboard);
-    sidebarCloseBtn.addEventListener('click', () => playerListSidebar.classList.remove('is-open'));
-    editModalCloseBtn.addEventListener('click', closeEditModal);
-    editPlayerModal.addEventListener('click', (e) => { if (e.target === editPlayerModal) closeEditModal(); });
-    importConfirmModal.addEventListener('click', (e) => e.target === importConfirmModal && closeImportConfirmModal());
+    },
     
-    // --- 初期化処理 ---
-    checkUrlForSquadData();
-    loadSquadFromLocalStorage();
-    body.dataset.layoutMode = document.querySelector('input[name="orientation"]:checked').value;
-    body.dataset.dragMode = currentDragMode;
-    updateModeToggleBtn();
-    renderAll();
+    isValidSquad(squad) {
+        return Array.isArray(squad) && squad.every(p => p.id && typeof p.number !== 'undefined' && p.name);
+    },
+    
+    showImportConfirmation(squadData) {
+        this._importedSquadData = squadData;
+        this.els.importConfirmModal.previewList.innerHTML = '<ul style="list-style: none; padding: 0;">' + squadData
+            .sort((a,b) => a.number - b.number)
+            .map(p => `<li><strong>No.${p.number}</strong> ${p.name}</li>`).join('') + '</ul>';
+        this.openModal(this.els.importConfirmModal.overlay);
+    },
+
+    confirmImport() {
+        if (!this._importedSquadData) return;
+        this.state.squad = this._importedSquadData;
+        this.state.starters = {};
+        this.state.substitutes = { GK: [], DF: [], MF: [], FW: [] };
+        this.renderAll();
+        this.closeAllModals();
+        history.replaceState(null, '', window.location.pathname);
+        alert(`${this.state.squad.length}人の選手をインポートしました。`);
+        this._importedSquadData = null;
+    },
+
+    processImport(data) {
+        if (this.isValidSquad(data)) {
+            this.showImportConfirmation(data);
+        } else {
+            alert('無効なデータ形式です。');
+        }
+    },
+
+    copySquadUrlToClipboard() {
+        if (this.state.squad.length === 0) { alert("共有する選手がいません。"); return; }
+        try {
+            const squadJSON = JSON.stringify(this.state.squad);
+            const compressed = LZString.compressToEncodedURIComponent(squadJSON);
+            const baseUrl = window.location.href.split('?')[0].split('#')[0];
+            const shareUrl = `${baseUrl}?data=${compressed}`;
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                alert("共有用URLをクリップボードにコピーしました！");
+                this.closeAllModals();
+            }).catch(err => alert("URLのコピーに失敗しました。"));
+        } catch(e) {
+            alert("URLの生成に失敗しました。");
+        }
+    },
+
+    copySquadToClipboard() {
+        if (this.state.squad.length === 0) { alert("コピーする選手がいません。"); return; }
+        navigator.clipboard.writeText(JSON.stringify(this.state.squad)).then(() => {
+            alert('クリップボードにコピーしました！');
+            this.closeAllModals();
+        }).catch(() => alert('コピーに失敗しました。'));
+    },
+    
+    exportSquadToFile() {
+        if (this.state.squad.length === 0) { alert("エクスポートする選手がいません。"); return; }
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.state.squad));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", "xisync_squad.json");
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+        this.closeAllModals();
+    },
+
+    importFromFile(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                this.processImport(JSON.parse(event.target.result));
+            } catch (error) {
+                alert('ファイルの読み込みに失敗しました。');
+            }
+        };
+        reader.readAsText(file);
+        e.target.value = ''; // Reset file input
+    },
+
+    async importFromClipboard() {
+        try {
+            const text = await navigator.clipboard.readText();
+            if (text) {
+                try {
+                    this.processImport(JSON.parse(text));
+                } catch (e) { alert('クリップボードのデータ形式が無効です。'); }
+            } else { alert('クリップボードが空です。'); }
+        } catch (err) {
+            alert('クリップボードの読み込みに失敗しました。');
+        }
+    },
+    setupSidebarControls() {
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        
+        // 既存のボタンのイベント
+        this.els.allOpenSidebarBtns.forEach(btn => btn.addEventListener('click', () => this.openSidebar(true)));
+        
+        if (isTouchDevice) {
+            this.setupTouchSidebar();
+        } else {
+            this.setupMouseSidebar();
+        }
+    },
+
+    setupMouseSidebar() {
+        const sidebar = this.els.sidebar.el;
+        const handle = this.els.sidebarHandle;
+
+        handle.addEventListener('mouseenter', () => {
+            this.sidebarHoverTimer = setTimeout(() => {
+                this.openSidebar();
+            }, 200);
+        });
+
+        handle.addEventListener('mouseleave', () => clearTimeout(this.sidebarHoverTimer));
+
+        sidebar.addEventListener('mouseleave', () => {
+            clearTimeout(this.sidebarHoverTimer);
+            this.closeSidebar();
+        });
+
+        this.els.pinSidebarBtn.addEventListener('click', () => this.toggleSidebarPin());
+    },
+
+    setupTouchSidebar() {
+        const sidebar = this.els.sidebar.el;
+        const handle = this.els.sidebarHandle;
+        let startX = 0, currentX = 0, isDragging = false;
+
+        const dragStart = (e) => {
+            isDragging = true;
+            startX = e.touches[0].clientX;
+            sidebar.classList.add('no-transition');
+            document.body.style.overflowX = 'hidden';
+        };
+
+        const dragMove = (e) => {
+            if (!isDragging) return;
+            currentX = e.touches[0].clientX;
+            const diff = Math.min(300, Math.max(0, currentX - startX));
+            sidebar.style.transform = `translateX(${-300 + diff}px)`;
+        };
+
+        const dragEnd = () => {
+            if (!isDragging) return;
+            isDragging = false;
+            sidebar.classList.remove('no-transition');
+            sidebar.style.transform = '';
+            document.body.style.overflowX = '';
+
+            const threshold = 100;
+            if (currentX - startX > threshold) {
+                this.openSidebar();
+            } else {
+                this.closeSidebar();
+            }
+        };
+
+        handle.addEventListener('touchstart', dragStart, { passive: true });
+        document.addEventListener('touchmove', dragMove, { passive: true });
+        document.addEventListener('touchend', dragEnd);
+
+        // サイドバーの外側タップで閉じる
+        document.addEventListener('click', (e) => {
+            if (sidebar.classList.contains('is-open') && !sidebar.contains(e.target) && !e.target.closest('.sidebar-handle') && !e.target.closest('#open-sidebar-btn')) {
+                this.closeSidebar(true);
+            }
+        });
+    },
+
+    openSidebar(isPinned = false) {
+        if (isPinned) this.els.sidebar.el.classList.add('is-pinned');
+        this.els.sidebar.el.classList.add('is-open');
+        this.els.body.classList.add('sidebar-is-open');
+    },
+
+    closeSidebar(force = false) {
+        if (this.els.sidebar.el.classList.contains('is-pinned') && !force) return;
+        
+        if (force) {
+           this.els.sidebar.el.classList.remove('is-pinned');
+        }
+        this.els.sidebar.el.classList.remove('is-open');
+        this.els.body.classList.remove('sidebar-is-open');
+    },
+
+    toggleSidebarPin() {
+        const sidebar = this.els.sidebar.el;
+        sidebar.classList.toggle('is-pinned');
+        if (sidebar.classList.contains('is-pinned')) {
+            this.openSidebar();
+        }
+    }
+};
+
+App.init(); // Run the app
+
 });
+
 </script>
 </body>
 </html>
