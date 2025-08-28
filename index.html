@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XISync - Tactical Canvas</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2248%22 fill=%22%23007bff%22 stroke=%22white%22 stroke-width=%224%22 /><text x=%2250%22 y=%2260%22 font-size=%2240%22 fill=%22white%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-weight=%22bold%22>XI</text></svg>">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
+    <style>
+        :root {
+            --pitch-bg: #539d56; --line-color: rgba(255, 255, 255, 0.6); --sidebar-bg: #f4f4f4;
+            --text-color: #333; --primary-color: #007bff; --secondary-color: #6c757d; --danger-color: #dc3545;
+            --marker-gk-color: #f39c12; --marker-df-color: #3498db;
+            --marker-mf-color: #2ecc71; --marker-fw-color: #e74c3c;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', 'Arial', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Meiryo', sans-serif;
+            margin: 0; background-color: #e9e9e9; color: var(--text-color);
+            padding: 20px; box-sizing: border-box; min-height: 100vh; overflow-x: hidden;
+        }
+
+        .container { display: flex; flex-wrap: wrap; gap: 20px; width: 100%; max-width: 1600px; margin: 0 auto; }
+        .left-panel, .right-panel { width: 350px; flex-shrink: 0; background-color: var(--sidebar-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 25px; }
+        .main-content { flex-grow: 1; min-width: 400px; }
+
+        .app-branding { text-align: center; padding-bottom: 20px; border-bottom: 1px solid #ddd; margin-bottom: 15px; }
+        .app-branding h2 { margin: 0; font-size: 2em; color: var(--primary-color); letter-spacing: 1px;}
+        .app-branding p { margin: 2px 0 0 0; font-size: 0.9em; color: #666; }
+
+        [data-layout-mode="horizontal"] .left-panel { display: none; }
+        [data-layout-mode="vertical"] .right-panel #player-management-section { display: none; }
+        [data-layout-mode="vertical"] .container { align-items: flex-start; }
+
+        @media (max-width: 1200px) {
+            .container { flex-direction: column; align-items: center; }
+            .left-panel, .right-panel, .main-content { width: 100%; max-width: 600px; }
+            [data-layout-mode="vertical"] .left-panel { display: none; }
+            [data-layout-mode="vertical"] .right-panel #player-management-section { display: flex; }
+        }
+
+        .control-group { display: flex; flex-direction: column; gap: 8px; }
+        .control-group label { font-weight: bold; }
+        #title-input { width: 100%; padding: 12px; font-size: 1.6em; font-weight: bold; border: 2px solid transparent; border-radius: 8px; box-sizing: border-box; margin-bottom: 15px; transition: border-color 0.3s; }
+        #title-input:focus { outline: none; border-color: var(--primary-color); }
+        
+        #capture-area { position: relative; background-color: #4a8d4d; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .pitch-wrapper { position: relative; }
+        .capture-title { color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); font-size: 30px; width: 100%; text-align:center; padding-bottom: 20px; box-sizing: border-box; display: none; }
+        
+        .pitch {
+            position: relative; width: 100%; background-color: var(--pitch-bg);
+            background-image: repeating-linear-gradient(90deg, transparent, transparent 4.8%, rgba(0,0,0,0.05) 5%, transparent 5.2%);
+            border: 3px solid var(--line-color); border-radius: 10px; box-sizing: border-box; overflow: hidden;
+        }
+        .pitch-wrapper.vertical .pitch { padding-top: 125%; background-image: repeating-linear-gradient(0deg, transparent, transparent 4.8%, rgba(0,0,0,0.05) 5%, transparent 5.2%); } 
+        .pitch-wrapper.horizontal .pitch { padding-top: 70%; }
+        
+        .pitch-line { position: absolute; box-sizing: border-box; border-color: var(--line-color); border-style: solid; }
+        .vertical .center-line   { width: 100%; height: 3px; background-color: var(--line-color); top: 0; left: 0; }
+        .vertical .center-circle { width: 40%; padding-top: 20%; border-width: 3px; border-radius: 0 0 50% 50%; border-top-style: none; top: -3px; left: 50%; transform: translateX(-50%); }
+        .vertical .goal-area { width: 30%; height: 7%; border-width: 3px; border-bottom-style: none; bottom: 0; left: 50%; transform: translateX(-50%); }
+        .vertical .penalty-area { width: 60%; height: 18%; border-width: 3px; border-bottom-style: none; bottom: 0; left: 50%; transform: translateX(-50%); }
+        .vertical .penalty-arc { width: 20%; height: 8%; border-width: 3px; border-radius: 50% 50% 0 0; border-bottom-style: none; bottom: 18%; left: 50%; transform: translateX(-50%); }
+        .vertical .goal { width: 20%; height: 4%; background: rgba(255,255,255,0.1); border-width: 3px; border-bottom-style: none; bottom: 0; left: 50%; transform: translateX(-50%); border-radius: 10px 10px 0 0; }
+        
+        .horizontal .center-line { width: 3px; height: 100%; background-color: var(--line-color); top: 0; right: 0; }
+        .horizontal .center-circle { height: 52%; width: 18.2%; border: 3px solid var(--line-color); border-radius: 50% 0 0 50%; border-right-style: none; right: -3px; top: 50%; transform: translateY(-50%); }
+        .horizontal .goal-area { width: 7%; height: 30%; border-width: 3px; border-left-style: none; top: 35%; left: 0; }
+        .horizontal .penalty-area { width: 18%; height: 50%; border-width: 3px; border-left-style: none; top: 25%; left: 0; }
+        .horizontal .penalty-arc { width: 8%; height: 20%; border-width: 3px; border-radius: 0 50% 50% 0; border-left-style: none; top: 40%; left: 18%; }
+        .horizontal .goal { width: 4%; height: 20%; background: rgba(255,255,255,0.1); border-width: 3px; border-right-style: none; top: 40%; left: 0; border-radius: 0 10px 10px 0; }
+
+        .capture-subs { padding-top: 20px; color: white; font-size: 15px; }
+        .capture-subs h4 { margin: 0 0 12px 0; text-align: center; font-size: 1.2em; letter-spacing: 1px; }
+        .subs-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        .subs-pos-group { display: flex; align-items: baseline; gap: 10px; }
+        .subs-pos-group .pos-label { font-weight: bold; flex-shrink: 0; width: 35px; }
+        .subs-pos-group .names { word-break: keep-all; }
+
+        .capture-watermark { display: none; }
+        .is-capturing .capture-watermark { display: block; position: absolute; bottom: 10px; right: 15px; font-size: 14px; color: rgba(255, 255, 255, 0.7); text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
+
+        .player-container { position: absolute; display: flex; flex-direction: column; align-items: center; user-select: none; transform: translate(-50%, -50%); transition: transform 0.2s, box-shadow 0.2s; will-change: top, left, transform; border-radius: 50%; }
+        .player-container.is-moving { cursor: move; z-index: 100; transform: translate(-50%, -50%) scale(1.05); }
+        .player-container.drop-target-hover { transform: translate(-50%, -50%) scale(1.15); }
+        .player-marker { width: 52px; height: 52px; border-radius: 50%; box-shadow: 0 3px 6px rgba(0,0,0,0.3); display: flex; flex-direction: column; justify-content: center; align-items: center; color: #333; font-weight: bold; border: 2px solid rgba(0,0,0,0.2); box-sizing: border-box; }
+        [data-drag-mode="position"] .player-marker { cursor: grab; }
+        [data-drag-mode="swap"] .player-marker { cursor: pointer; }
+        .player-marker.gk { background-color: var(--marker-gk-color); } .player-marker.df { background-color: var(--marker-df-color); color: white; }
+        .player-marker.mf { background-color: var(--marker-mf-color); color: white; } .player-marker.fw { background-color: var(--marker-fw-color); color: white; }
+        .player-number { font-size: 22px; line-height: 1; pointer-events: none; } .player-pos { font-size: 11px; line-height: 1; opacity: 0.8; margin-top: 2px; pointer-events: none; }
+        .player-name { background-color: rgba(0, 0, 0, 0.7); color: white; font-size: 14px; font-weight: bold; padding: 5px 8px; border-radius: 12px; margin-top: 6px; text-align: center; max-width: 120px; white-space: normal; word-break: break-all; line-height: 1.2; box-shadow: 0 1px 4px rgba(0,0,0,0.25); cursor: default; }
+        .unassign-btn { position: absolute; top: -10px; right: -10px; width: 24px; height: 24px; background-color: rgba(255, 255, 255, 0.9); color: #555; border-radius: 50%; border: 1px solid #ccc; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 16px; font-weight: bold; line-height: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.2); transition: all 0.2s; z-index: 11; padding: 0; }
+        .unassign-btn:hover { background-color: #e74c3c; color: white; transform: scale(1.1); }
+        .is-capturing .unassign-btn, .is-capturing .unassign-btn-sub { display: none; }
+        
+        select { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background-color 0.3s, transform 0.1s; }
+        button:active { transform: scale(0.98); }
+        .btn-primary { background-color: var(--primary-color); color: white; } .btn-secondary { background-color: var(--secondary-color); color: white; } .btn-danger { background-color: var(--danger-color); color: white; }
+        .orientation-toggle { display: flex; gap: 10px; }
+        .orientation-toggle input { display: none; }
+        .orientation-toggle label { flex: 1; text-align: center; padding: 8px; border-radius: 6px; border: 1px solid #ccc; cursor: pointer; background-color: #fff; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 14px; }
+        .orientation-toggle input:checked + label { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
+        
+        #player-list-controls { border: 1px solid #ddd; border-radius: 8px; padding: 15px; background-color: #fff; }
+        
+        .player-list-item { display: flex; align-items: center; padding: 8px 10px; border-bottom: 1px solid #eee; cursor: grab; user-select: none; }
+        .player-list-item.is-assigned { background-color: #f0f0f0; color: #999; cursor: not-allowed; }
+        .player-list-item .num, .player-list-item .name { padding: 4px; } .player-list-item .num { font-weight: bold; width: 30px; }
+        .player-list-item .name { flex-grow: 1; }
+        
+        .drag-ghost { position: absolute; left: -1000px; background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 2100; border-radius: 15px; padding: 5px 10px; font-size: 14px; display: inline-flex; align-items: center; }
+        .drag-ghost .num { font-weight: bold; margin-right: 8px; }
+
+        #substitutes-container { display: flex; flex-direction: column; gap: 10px; }
+        .sub-category { display: flex; align-items: flex-start; gap: 8px; }
+        .sub-category-label { font-weight: bold; width: 35px; padding-top: 10px; flex-shrink: 0; }
+        .sub-drop-zone { flex-grow: 1; min-height: 40px; border: 2px dashed #ccc; border-radius: 8px; padding: 5px; background-color: #fff; transition: background-color 0.2s, border-color 0.2s; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 8px; }
+        .sub-drop-zone.drop-target-hover { background-color: #e9f5ff; border-color: var(--primary-color); }
+        .substitute-item { position: relative; display: inline-flex; align-items: center; background-color: #e9ecef; border-radius: 15px; padding: 5px 25px 5px 10px; font-size: 14px; user-select: none; cursor: grab; }
+        .substitute-item .num { font-weight: bold; margin-right: 8px; }
+        .unassign-btn-sub { position: absolute; top: 50%; right: 4px; transform: translateY(-50%); width: 18px; height: 18px; background-color: #ccc; color: white; border-radius: 50%; border: none; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 14px; line-height: 1; padding: 0; }
+        .unassign-btn-sub:hover { background-color: #e74c3c; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: none; justify-content: center; align-items: center; }
+        .modal-content { background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); width: 90%; max-width: 420px; position: relative; }
+        .modal-close-btn { position: absolute; top: 10px; right: 15px; font-size: 28px; color: #999; background: none; border: none; cursor: pointer; width: auto; padding: 0; }
+        .modal-content h3 { margin-top: 0; margin-bottom: 25px; text-align: center; }
+        
+        #edit-player-modal .form-group { margin-bottom: 20px; }
+        #edit-player-modal .form-group label { display: block; margin-bottom: 8px; font-weight: bold; }
+        #edit-player-modal input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; }
+
+        .number-input-wrapper { display: flex; align-items: center; gap: 5px; }
+        .number-input-btn { width: 48px !important; height: 48px; font-size: 24px !important; padding: 0 !important; background-color: #f0f0f0; color: #333; flex-shrink: 0; user-select: none; }
+        .number-input-btn:hover { background-color: #e0e0e0; }
+        #edit-player-number { width: 100%; height: 48px; font-size: 22px; text-align: center; border: 1px solid #ccc; border-radius: 8px; -moz-appearance: textfield; }
+        #edit-player-number::-webkit-outer-spin-button, #edit-player-number::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        #delete-player-btn-modal { display: flex; align-items: center; justify-content: center; gap: 8px; }
+        #delete-player-btn-modal svg { width: 18px; height: 18px; }
+
+        .share-section { margin-bottom: 25px; }
+        .share-section-title { font-weight: bold; margin-bottom: 10px; }
+        .share-actions { display: flex; flex-direction: column; gap: 10px; }
+        .share-actions button, .share-actions label { flex: 1; font-size: 14px; padding: 10px; text-align: center; }
+        #import-squad-input { display: none; }
+        
+        #open-sidebar-btn { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; padding: 10px; }
+        #open-sidebar-btn svg { width: 20px; height: 20px; }
+
+        #player-list-sidebar { position: fixed; top: 0; left: 0; width: 300px; height: 100vh; background-color: #fff; box-shadow: 4px 0 15px rgba(0,0,0,0.2); transform: translateX(-100%); transition: transform 0.3s ease-in-out; z-index: 1000; display: flex; flex-direction: column; }
+        #player-list-sidebar.is-open { transform: translateX(0); }
+        .sidebar-header { padding: 15px 15px 10px 15px; border-bottom: 1px solid #eee; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+        .sidebar-header .title-bar { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+        .sidebar-header h3 { margin: 0; font-size: 1.2em; }
+        .sidebar-header .edit-note { font-size: 0.8em; color: #666; }
+        .sidebar-add-player { padding: 15px; border-bottom: 1px solid #eee; background-color: #f9f9f9; }
+        .add-player-form { display: flex; gap: 8px; align-items: center; }
+        .add-player-form input[type="number"] { width: 60px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; } 
+        .add-player-form input[type="text"] { flex: 1; min-width: 0; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .add-player-form button { width: auto; flex-shrink: 0; font-size: 14px; padding: 8px 12px; }
+        #sidebar-player-list { flex-grow: 1; overflow-y: auto; }
+
+        .mode-toggle-fab { position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px; background-color: var(--primary-color); color: white; border: none; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; display: flex; justify-content: center; align-items: center; z-index: 1000; transition: transform 0.2s, background-color 0.2s; }
+        .mode-toggle-fab:hover { background-color: #0056b3; }
+        .mode-toggle-fab:active { transform: scale(0.95); }
+        .mode-toggle-fab svg { width: 30px; height: 30px; }
+
+        .mode-toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background-color: rgba(0, 0, 0, 0.8); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; font-weight: bold; z-index: 3000; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; white-space: nowrap; }
+        .mode-toast.show { opacity: 1; visibility: visible; }
+    </style>
+</head>
+<body data-layout-mode="vertical" data-drag-mode="swap">
+    <div class="container">
+        <div class="left-panel">
+            <div id="player-management-section-left" class="control-group"></div>
+        </div>
+        
+        <div class="main-content">
+            <input type="text" id="title-input" placeholder="スタメン予想">
+            <div id="capture-area">
+                <div class="pitch-wrapper vertical" id="pitch-wrapper">
+                    <div class="capture-title" id="capture-title"></div>
+                    <div class="pitch" id="pitch"></div>
+                </div>
+                <div class="capture-subs" id="capture-subs"></div>
+                <div id="capture-watermark" class="capture-watermark"></div>
+            </div>
+        </div>
+
+        <aside class="right-panel">
+             <div class="app-branding">
+                <h2>XISync</h2>
+                <p>イレブン・シンク</p>
+            </div>
+
+            <div class="control-group">
+                <label>ピッチの向き</label>
+                <div class="orientation-toggle">
+                    <input type="radio" id="orientation-v" name="orientation" value="vertical" checked><label for="orientation-v">縦</label>
+                    <input type="radio" id="orientation-h" name="orientation" value="horizontal"><label for="orientation-h">横</label>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>フォーメーション</label>
+                <select id="formation-select">
+                    <option value="4-3-3">4-3-3</option>
+                    <option value="4-4-2">4-4-2</option>
+                    <option value="4-2-3-1" selected>4-2-3-1</option>
+                    <option value="4-1-4-1">4-1-4-1</option>
+                    <option value="4-3-1-2">4-3-1-2 (ダイヤモンド)</option>
+                    <option value="4-3-2-1">4-3-2-1 (ツリー)</option>
+                    <option value="3-5-2">3-5-2</option>
+                    <option value="3-4-3">3-4-3</option>
+                    <option value="3-4-2-1">3-4-2-1</option>
+                    <option value="5-3-2">5-3-2</option>
+                    <option value="5-4-1">5-4-1</option>
+                </select>
+            </div>
+
+            <div id="player-management-section" class="control-group" style="gap: 25px;">
+                <div class="control-group">
+                    <label>選手管理</label>
+                    <div id="player-list-controls">
+                        <button id="open-sidebar-btn" class="btn-primary">
+                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M15.78 4.33C15.42 4.08 15 4 14.56 4h-5.12c-.44 0-.82.08-1.18.33L3 7.84V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7.84l-5.22-3.51zM10 16H8v-2h2v2zm0-4H8v-2h2v2zm6 4h-2v-2h2v2zm0-4h-2v-2h2v2z"></path></svg>
+                            <span>選手リストを開く</span>
+                        </button>
+                        <button id="share-data-btn" class="btn-secondary" style="margin-top: 10px; font-size: 14px; padding: 10px;">選手リストを共有 / 読み込み</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>控え選手</label>
+                    <div id="substitutes-container">
+                        <div class="sub-category"><div class="sub-category-label">GK</div><div class="sub-drop-zone" data-pos-category="GK"></div></div>
+                        <div class="sub-category"><div class="sub-category-label">DF</div><div class="sub-drop-zone" data-pos-category="DF"></div></div>
+                        <div class="sub-category"><div class="sub-category-label">MF</div><div class="sub-drop-zone" data-pos-category="MF"></div></div>
+                        <div class="sub-category"><div class="sub-category-label">FW</div><div class="sub-drop-zone" data-pos-category="FW"></div></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>操作</label>
+                <button id="save-image-btn" class="btn-primary">画像を保存する</button>
+                <button id="reset-all-btn" class="btn-danger" style="margin-top: 10px;">全配置をリセット</button>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Sidebar, Modals, FAB -->
+    <div id="player-list-sidebar">
+        <div class="sidebar-header">
+            <div class="title-bar">
+                <h3>選手リスト</h3>
+                <button class="modal-close-btn" id="sidebar-close-btn">&times;</button>
+            </div>
+            <span class="edit-note">長押し/ダブルクリックで編集</span>
+        </div>
+        <div class="sidebar-add-player">
+            <div class="add-player-form">
+                <input type="number" id="sidebar-new-player-number" placeholder="No." min="1" inputmode="numeric" style="ime-mode: inactive;">
+                <input type="text" id="sidebar-new-player-name" placeholder="選手名">
+                <button id="sidebar-add-player-btn" class="btn-primary">+</button>
+            </div>
+        </div>
+        <div id="sidebar-player-list"></div>
+    </div>
+    
+    <div class="modal-overlay" id="edit-player-modal">
+        <div class="modal-content">
+            <button class="modal-close-btn" id="edit-modal-close-btn">&times;</button>
+            <h3>選手情報の編集</h3>
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <div class="form-group">
+                    <label for="edit-player-number">背番号</label>
+                    <div class="number-input-wrapper">
+                        <button id="decrement-btn" class="number-input-btn">-</button>
+                        <input type="number" id="edit-player-number" inputmode="numeric" style="ime-mode: inactive;">
+                        <button id="increment-btn" class="number-input-btn">+</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="edit-player-name">選手名</label>
+                    <input type="text" id="edit-player-name">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
+                    <button id="save-player-changes-btn" class="btn-primary">変更を保存</button>
+                    <button id="delete-player-btn-modal" class="btn-danger">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+                        <span>この選手を削除する</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="share-modal-overlay">
+        <div class="modal-content">
+            <button class="modal-close-btn" id="modal-close-btn">&times;</button>
+            <h3>選手リストの共有 / 読み込み</h3>
+            <div class="share-section">
+                <div class="share-section-title">リストを出力</div>
+                <div class="share-actions" style="flex-direction: column; gap: 10px;">
+                    <button id="copy-url-btn" class="btn-primary">URLをコピーして共有</button>
+                    <button id="copy-squad-btn" class="btn-secondary">テキスト(データ)をコピー</button>
+                    <button id="export-squad-btn" class="btn-secondary">ファイルで保存</button>
+                </div>
+            </div>
+            <div class="share-section">
+                <div class="share-section-title">リストを読み込み</div>
+                <div class="share-actions">
+                    <button id="import-from-clipboard-btn" class="btn-primary">クリップボードから読込</button>
+                    <label for="import-squad-input" class="btn-secondary">ファイルを選択して読込</label>
+                    <input type="file" id="import-squad-input" accept=".json">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="import-confirm-modal">
+        <div class="modal-content">
+            <h3>選手リストのインポート</h3>
+            <p>共有された以下の選手データで、現在のリストを上書きしますか？</p>
+            <div id="import-preview-list" style="max-height: 200px; overflow-y: auto; border: 1px solid #eee; padding: 10px; margin-bottom: 20px; border-radius: 6px;">
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button id="confirm-import-btn" class="btn-primary" style="flex: 1;">インポートする</button>
+                <button id="cancel-import-btn" class="btn-secondary" style="flex: 1;">キャンセル</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="drag-ghost" id="drag-ghost"></div>
+
+    <button id="mode-toggle-btn" class="mode-toggle-fab" title="マーカー操作モード切替"></button>
+    <div id="mode-toast" class="mode-toast"></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- 要素取得 ---
+    const body = document.body;
+    const pitch = document.getElementById('pitch');
+    const pitchWrapper = document.getElementById('pitch-wrapper');
+    const formationSelect = document.getElementById('formation-select');
+    const saveImageBtn = document.getElementById('save-image-btn');
+    const dragGhost = document.getElementById('drag-ghost');
+    const orientationRadios = document.getElementsByName('orientation');
+    
+    const playerManagementSection = document.getElementById('player-management-section');
+    const playerManagementSectionLeft = document.getElementById('player-management-section-left');
+    playerManagementSectionLeft.innerHTML = playerManagementSection.innerHTML;
+
+    const leftPanel = document.querySelector('.left-panel');
+    const rightPanel = document.querySelector('.right-panel');
+
+    const leftPanelElements = {
+        subDropZones: leftPanel.querySelectorAll('.sub-drop-zone'),
+        shareDataBtn: leftPanel.querySelector('#share-data-btn'),
+        openSidebarBtn: leftPanel.querySelector('#open-sidebar-btn')
+    };
+    const rightPanelElements = {
+        subDropZones: rightPanel.querySelectorAll('#player-management-section .sub-drop-zone'),
+        shareDataBtn: rightPanel.querySelector('#share-data-btn'),
+        openSidebarBtn: rightPanel.querySelector('#open-sidebar-btn'),
+        resetAllBtn: document.getElementById('reset-all-btn')
+    };
+
+    const shareModalOverlay = document.getElementById('share-modal-overlay');
+    const modalCloseBtn = document.getElementById('modal-close-btn');
+    const copyUrlBtn = document.getElementById('copy-url-btn');
+    const copySquadBtn = document.getElementById('copy-squad-btn');
+    const exportSquadBtn = document.getElementById('export-squad-btn');
+    const importSquadInput = document.getElementById('import-squad-input');
+    const importFromClipboardBtn = document.getElementById('import-from-clipboard-btn');
+    
+    const playerListSidebar = document.getElementById('player-list-sidebar');
+    const sidebarPlayerList = document.getElementById('sidebar-player-list');
+    const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
+    const sidebarAddPlayerBtn = document.getElementById('sidebar-add-player-btn');
+    const sidebarNewPlayerNumberInput = document.getElementById('sidebar-new-player-number');
+    const sidebarNewPlayerNameInput = document.getElementById('sidebar-new-player-name');
+
+    const editPlayerModal = document.getElementById('edit-player-modal');
+    const editModalCloseBtn = document.getElementById('edit-modal-close-btn');
+    const editPlayerNumberInput = document.getElementById('edit-player-number');
+    const editPlayerNameInput = document.getElementById('edit-player-name');
+    const savePlayerChangesBtn = document.getElementById('save-player-changes-btn');
+    const deletePlayerBtnModal = document.getElementById('delete-player-btn-modal');
+    const incrementBtn = document.getElementById('increment-btn');
+    const decrementBtn = document.getElementById('decrement-btn');
+    
+    const importConfirmModal = document.getElementById('import-confirm-modal');
+    const importPreviewList = document.getElementById('import-preview-list');
+    const confirmImportBtn = document.getElementById('confirm-import-btn');
+    const cancelImportBtn = document.getElementById('cancel-import-btn');
+    
+    const modeToggleBtn = document.getElementById('mode-toggle-btn');
+    const modeToast = document.getElementById('mode-toast');
+    const svgIcons = {
+        position: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 1.707V5.5a.5.5 0 0 1-1 0V1.707L6.354 2.854a.5.5 0 1 1-.708-.708l2-2zM8 10a.5.5 0 0 1 .5.5v3.793l1.146-1.147a.5.5 0 0 1 .708.708l-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 0 1 .708-.708L7.5 14.293V10.5A.5.5 0 0 1 8 10zM.146 8.354a.5.5 0 0 1 0-.708l2-2a.5.5 0 1 1 .708.708L1.707 7.5H5.5a.5.5 0 0 1 0 1H1.707l1.147 1.146a.5.5 0 0 1-.708.708l-2-2zM10 8a.5.5 0 0 1 .5-.5h3.793l-1.147-1.146a.5.5 0 0 1 .708-.708l2 2a.5.5 0 0 1 0 .708l-2 2a.5.5 0 0 1-.708-.708L14.293 8.5H10.5A.5.5 0 0 1 10 8z"/></svg>`,
+        swap: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1 11.5a.5.5 0 0 0 .5.5h11.793l-1.147 1.146a.5.5 0 0 0 .708.708l2-2a.5.5 0 0 0 0-.708l-2-2a.5.5 0 0 0-.708.708L13.293 11H1.5a.5.5 0 0 0-.5.5zm14-7a.5.5 0 0 1-.5.5H2.707l1.147 1.146a.5.5 0 1 1-.708.708l-2-2a.5.5 0 0 1 0-.708l2-2a.5.5 0 1 1 .708.708L2.707 4H14.5a.5.5 0 0 1 .5.5z"/></svg>`
+    };
+    
+    // --- データ管理 ---
+    let squad = [];
+    let starters = {};
+    let substitutes = { GK: [], DF: [], MF: [], FW: [] };
+    let currentOrientation = 'vertical';
+    let currentDragMode = 'swap';
+    let longPressTimer;
+    let isDragging = false;
+    let editingPlayerId = null;
+    let toastTimer;
+    let numberChangeInterval = null;
+
+    const formations = { 
+        '4-3-3':    [ { pos: 'GK'}, { pos: 'RSB'}, { pos: 'RCB'}, { pos: 'LCB'}, { pos: 'LSB'}, { pos: 'DMF'}, { pos: 'RCM'}, { pos: 'LCM'}, { pos: 'RWG'}, { pos: 'CF'}, { pos: 'LWG'} ],
+        '4-4-2':    [ { pos: 'GK'}, { pos: 'RSB'}, { pos: 'RCB'}, { pos: 'LCB'}, { pos: 'LSB'}, { pos: 'RMF'}, { pos: 'CMF'}, { pos: 'CMF', isDuplicate: true }, { pos: 'LMF'}, { pos: 'FW'}, { pos: 'FW', isDuplicate: true } ],
+        '4-2-3-1':  [ { pos: 'GK'}, { pos: 'RSB'}, { pos: 'RCB'}, { pos: 'LCB'}, { pos: 'LSB'}, { pos: 'DMF'}, { pos: 'DMF', isDuplicate: true }, { pos: 'RMF'}, { pos: 'AMF'}, { pos: 'LMF'}, { pos: 'CF'} ],
+        '4-1-4-1':  [ { pos: 'GK'}, { pos: 'RSB'}, { pos: 'RCB'}, { pos: 'LCB'}, { pos: 'LSB'}, { pos: 'DMF'}, { pos: 'RMF'}, { pos: 'RCM'}, { pos: 'LCM'}, { pos: 'LMF'}, { pos: 'CF'} ],
+        '4-3-1-2':  [ { pos: 'GK'}, { pos: 'RSB'}, { pos: 'RCB'}, { pos: 'LCB'}, { pos: 'LSB'}, { pos: 'DMF'}, { pos: 'RCM'}, { pos: 'LCM'}, { pos: 'AMF'}, { pos: 'FW'}, { pos: 'FW', isDuplicate: true } ],
+        '4-3-2-1':  [ { pos: 'GK'}, { pos: 'RSB'}, { pos: 'RCB'}, { pos: 'LCB'}, { pos: 'LSB'}, { pos: 'RCM'}, { pos: 'CMF'}, { pos: 'LCM'}, { pos: 'RAM'}, { pos: 'LAM'}, { pos: 'CF'} ],
+        '3-5-2':    [ { pos: 'GK'}, { pos: 'RCB'}, { pos: 'CB'}, { pos: 'LCB'}, { pos: 'RWB'}, { pos: 'RCM'}, { pos: 'DMF'}, { pos: 'LCM'}, { pos: 'LWB'}, { pos: 'FW'}, { pos: 'FW', isDuplicate: true } ],
+        '3-4-3':    [ { pos: 'GK'}, { pos: 'RCB'}, { pos: 'CB'}, { pos: 'LCB'}, { pos: 'RMF'}, { pos: 'CMF'}, { pos: 'CMF', isDuplicate: true }, { pos: 'LMF'}, { pos: 'RWG'}, { pos: 'CF'}, { pos: 'LWG'} ],
+        '3-4-2-1':  [ { pos: 'GK'}, { pos: 'RCB'}, { pos: 'CB'}, { pos: 'LCB'}, { pos: 'RWB'}, { pos: 'DMF'}, { pos: 'DMF', isDuplicate: true }, { pos: 'LWB'}, { pos: 'RAM'}, { pos: 'LAM'}, { pos: 'CF'} ],
+        '5-3-2':    [ { pos: 'GK'}, { pos: 'RCB'}, { pos: 'CB'}, { pos: 'LCB'}, { pos: 'RWB'}, { pos: 'LWB'}, { pos: 'RCM'}, { pos: 'CMF'}, { pos: 'LCM'}, { pos: 'FW'}, { pos: 'FW', isDuplicate: true } ],
+        '5-4-1':    [ { pos: 'GK'}, { pos: 'RSB'}, { pos: 'RCB'}, { pos: 'CB'}, { pos: 'LCB'}, { pos: 'LSB'}, { pos: 'RMF'}, { pos: 'RCM'}, { pos: 'LCM'}, { pos: 'LMF'}, { pos: 'CF'} ]
+    };
+    const formationCoords = {
+        '4-3-3':    [ { top: 50, left: 8 }, { top: 85, left: 28 }, { top: 65, left: 25 }, { top: 35, left: 25 }, { top: 15, left: 28 }, { top: 50, left: 48 }, { top: 70, left: 60 }, { top: 30, left: 60 }, { top: 80, left: 80 }, { top: 50, left: 85 }, { top: 20, left: 80 } ],
+        '4-4-2':    [ { top: 50, left: 8 }, { top: 85, left: 28 }, { top: 65, left: 25 }, { top: 35, left: 25 }, { top: 15, left: 28 }, { top: 85, left: 55 }, { top: 60, left: 50 }, { top: 40, left: 50 }, { top: 15, left: 55 }, { top: 65, left: 78 }, { top: 35, left: 78 } ],
+        '4-2-3-1':  [ { top: 50, left: 8 }, { top: 85, left: 28 }, { top: 65, left: 25 }, { top: 35, left: 25 }, { top: 15, left: 28 }, { top: 65, left: 48 }, { top: 35, left: 48 }, { top: 80, left: 70 }, { top: 50, left: 72 }, { top: 20, left: 70 }, { top: 50, left: 88 } ],
+        '4-1-4-1':  [ { top: 50, left: 8 }, { top: 85, left: 28 }, { top: 65, left: 25 }, { top: 35, left: 25 }, { top: 15, left: 28 }, { top: 50, left: 45 }, { top: 85, left: 65 }, { top: 65, left: 62 }, { top: 35, left: 62 }, { top: 15, left: 65 }, { top: 50, left: 85 } ],
+        '4-3-1-2':  [ { top: 50, left: 8 }, { top: 85, left: 28 }, { top: 65, left: 25 }, { top: 35, left: 25 }, { top: 15, left: 28 }, { top: 50, left: 45 }, { top: 75, left: 55 }, { top: 25, left: 55 }, { top: 50, left: 70 }, { top: 65, left: 85 }, { top: 35, left: 85 } ],
+        '4-3-2-1':  [ { top: 50, left: 8 }, { top: 85, left: 28 }, { top: 65, left: 25 }, { top: 35, left: 25 }, { top: 15, left: 28 }, { top: 70, left: 55 }, { top: 50, left: 50 }, { top: 30, left: 55 }, { top: 65, left: 75 }, { top: 35, left: 75 }, { top: 50, left: 88 } ],
+        '3-5-2':    [ { top: 50, left: 8 }, { top: 75, left: 28 }, { top: 50, left: 25 }, { top: 25, left: 28 }, { top: 90, left: 55 }, { top: 70, left: 50 }, { top: 50, left: 42 }, { top: 30, left: 50 }, { top: 10, left: 55 }, { top: 65, left: 82 }, { top: 35, left: 82 } ],
+        '3-4-3':    [ { top: 50, left: 8 }, { top: 75, left: 28 }, { top: 50, left: 25 }, { top: 25, left: 28 }, { top: 85, left: 58 }, { top: 65, left: 52 }, { top: 35, left: 52 }, { top: 15, left: 58 }, { top: 80, left: 80 }, { top: 50, left: 85 }, { top: 20, left: 80 } ],
+        '3-4-2-1':  [ { top: 50, left: 8 }, { top: 75, left: 28 }, { top: 50, left: 25 }, { top: 25, left: 28 }, { top: 85, left: 58 }, { top: 65, left: 50 }, { top: 35, left: 50 }, { top: 15, left: 58 }, { top: 65, left: 78 }, { top: 35, left: 78 }, { top: 50, left: 88 } ],
+        '5-3-2':    [ { top: 50, left: 8 }, { top: 75, left: 28 }, { top: 50, left: 25 }, { top: 25, left: 28 }, { top: 90, left: 35 }, { top: 10, left: 35 }, { top: 75, left: 60 }, { top: 50, left: 55 }, { top: 25, left: 60 }, { top: 65, left: 82 }, { top: 35, left: 82 } ],
+        '5-4-1':    [ { top: 50, left: 8 }, { top: 90, left: 28 }, { top: 70, left: 25 }, { top: 50, left: 22 }, { top: 30, left: 25 }, { top: 10, left: 28 }, { top: 85, left: 58 }, { top: 60, left: 52 }, { top: 40, left: 52 }, { top: 15, left: 58 }, { top: 50, left: 82 } ]
+    };
+
+    function renderAll() { renderFormation(formationSelect.value); renderPlayerList(); renderSubstitutes(); }
+
+    function renderPlayerList() {
+        sidebarPlayerList.innerHTML = '';
+        const assignedPlayerIds = new Set([...Object.values(starters).map(s => s.playerId), ...Object.values(substitutes).flat()]);
+        squad.sort((a, b) => a.number - b.number).forEach(player => {
+            const isAssigned = assignedPlayerIds.has(player.id);
+            const playerEl = document.createElement('div');
+            playerEl.className = `player-list-item ${isAssigned ? 'is-assigned' : ''}`;
+            playerEl.dataset.playerId = player.id;
+            playerEl.innerHTML = `<span class="num">${player.number}</span> <span class="name">${player.name}</span>`;
+            
+            if (!isAssigned) {
+                playerEl.draggable = true;
+                playerEl.addEventListener('dragstart', (e) => handleDragStartFromList(e, player.id));
+            }
+            playerEl.addEventListener('mousedown', (e) => handleMouseDown(e, player.id));
+            playerEl.addEventListener('mouseup', handleMouseUp);
+            playerEl.addEventListener('mouseleave', handleMouseUp);
+            playerEl.addEventListener('mousemove', handleMouseMove);
+            playerEl.addEventListener('touchstart', (e) => handleMouseDown(e, player.id), { passive: true });
+            playerEl.addEventListener('touchend', handleMouseUp);
+            playerEl.addEventListener('touchmove', handleMouseMove);
+            playerEl.addEventListener('dblclick', (e) => { clearTimeout(longPressTimer); handleMouseUp(); openEditModal(player.id); });
+
+            sidebarPlayerList.appendChild(playerEl);
+        });
+    }
+
+    function renderSubstitutes() {
+        [leftPanelElements.subDropZones, rightPanelElements.subDropZones].forEach(zones => {
+            zones.forEach(zone => {
+                zone.innerHTML = '';
+                const category = zone.dataset.posCategory;
+                substitutes[category].forEach(playerId => {
+                    const player = squad.find(p => p.id === playerId);
+                    if (!player) return;
+                    const subEl = document.createElement('div');
+                    subEl.className = 'substitute-item';
+                    subEl.dataset.playerId = playerId;
+                    subEl.draggable = true;
+                    subEl.addEventListener('dragstart', (e) => handleDragStartFromSub(e, playerId));
+                    subEl.innerHTML = `<span class="num">${player.number}</span><span class="name">${player.name}</span><button class="unassign-btn-sub">&times;</button>`;
+                    subEl.querySelector('.unassign-btn-sub').addEventListener('click', (e) => {
+                        e.stopPropagation(); unassignPlayer(playerId); renderAll();
+                    });
+                    zone.appendChild(subEl);
+                });
+            });
+        });
+    }
+
+    function renderFormation(formation) {
+        pitchWrapper.className = `pitch-wrapper ${currentOrientation}`;
+        pitch.innerHTML = `<div class="pitch-line center-line"></div><div class="pitch-line center-circle"></div><div class="pitch-line goal-area"></div><div class="pitch-line penalty-area"></div><div class="pitch-line penalty-arc"></div><div class="pitch-line goal"></div>`;
+        const formationData = formations[formation];
+        const coordsData = formationCoords[formation];
+        formationData.forEach((data, index) => {
+            const posId = `${data.pos}_${data.isDuplicate ? index : 1}`;
+            createPlayerMarker(data, coordsData[index], posId);
+        });
+    }
+    
+    function getRole(pos) {
+        if (pos === 'GK') return 'gk';
+        if (['B', 'SB', 'CB'].some(p => pos.includes(p))) return 'df';
+        if (['MF', 'WB'].some(p => pos.includes(p))) return 'mf';
+        return 'fw'; // Default fallback for FW, WG, etc.
+    }
+
+    function createPlayerMarker(data, defaultCoords, posId) {
+        const container = document.createElement('div');
+        container.className = 'player-container';
+        container.dataset.posId = posId;
+        
+        const starterInfo = starters[posId];
+        const coordsToUse = starterInfo?.coords ?? defaultCoords;
+        
+        if (currentOrientation === 'vertical') {
+            container.style.top = `${100 - (coordsToUse.left * 0.9)}%`;
+            container.style.left = `${coordsToUse.top}%`;
+        } else {
+            container.style.top = `${coordsToUse.top}%`;
+            container.style.left = `${coordsToUse.left * 0.9}%`;
+        }
+
+        const player = starterInfo ? squad.find(p => p.id === starterInfo.playerId) : null;
+        const role = getRole(data.pos);
+        
+        container.innerHTML = `<div class="player-marker ${role}"><span class="player-number">${player?.number ?? ''}</span><span class="player-pos">${data.pos}</span></div><div class="player-name">${player?.name ?? data.pos}</div>`;
+        
+        container.addEventListener('dragover', handleDragOver);
+        container.addEventListener('dragleave', handleDragLeave);
+        container.addEventListener('drop', (e) => handleDropOnPitch(e, posId));
+        
+        if (player) {
+            if (currentDragMode === 'position') {
+                makeMarkerMovable(container);
+                container.draggable = false;
+            } else {
+                container.draggable = true;
+                container.addEventListener('dragstart', (e) => handleDragStartFromPitch(e, posId, player.id));
+            }
+            const unassignBtn = document.createElement('button');
+            unassignBtn.innerHTML = '&times;'; unassignBtn.className = 'unassign-btn';
+            unassignBtn.addEventListener('click', (e) => { e.stopPropagation(); unassignPlayer(player.id); renderAll(); });
+            container.appendChild(unassignBtn);
+        }
+        pitch.appendChild(container);
+    }
+    
+    function handleDragStartFromList(e, playerId) { setupDrag(e, { type: 'list', playerId }); }
+    function handleDragStartFromPitch(e, posId, playerId) { setupDrag(e, { type: 'pitch', posId, playerId }); }
+    function handleDragStartFromSub(e, playerId) { setupDrag(e, { type: 'substitute', playerId }); }
+    
+    function setupDrag(e, sourceInfo) {
+        e.dataTransfer.setData('application/json', JSON.stringify(sourceInfo));
+        e.dataTransfer.effectAllowed = 'move';
+        const player = squad.find(p => p.id === sourceInfo.playerId);
+        if (player) {
+            dragGhost.innerHTML = `<span class="num">${player.number}</span><span class="name">${player.name}</span>`;
+            e.dataTransfer.setDragImage(dragGhost, 15, 15);
+        }
+        e.stopPropagation();
+        if (playerListSidebar.classList.contains('is-open')) {
+            playerListSidebar.classList.remove('is-open');
+        }
+    }
+
+    function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drop-target-hover'); }
+    function handleDragLeave(e) { e.currentTarget.classList.remove('drop-target-hover'); }
+
+    function handleDropOnPitch(e, targetPosId) {
+        e.preventDefault(); e.stopPropagation();
+        e.currentTarget.classList.remove('drop-target-hover');
+        
+        const sourceInfo = JSON.parse(e.dataTransfer.getData('application/json'));
+        const sourcePlayerId = sourceInfo.playerId;
+        const targetPlayerId = starters[targetPosId]?.playerId;
+
+        if (sourcePlayerId === targetPlayerId) return;
+        
+        if (sourceInfo.type === 'substitute') {
+            unassignPlayer(sourcePlayerId); // from subs
+            if (targetPlayerId) {
+                const pos = targetPosId.split('_')[0];
+                const targetPlayerRole = getRole(pos).toUpperCase();
+                unassignPlayer(targetPlayerId); // from starters
+                substitutes[targetPlayerRole].push(targetPlayerId);
+            }
+            starters[targetPosId] = { playerId: sourcePlayerId, coords: starters[targetPosId]?.coords || null };
+
+        } else {
+            unassignPlayer(sourcePlayerId);
+            if (targetPlayerId) { unassignPlayer(targetPlayerId); }
+    
+            starters[targetPosId] = { playerId: sourcePlayerId, coords: starters[targetPosId]?.coords || null };
+            if (targetPlayerId && sourceInfo.type === 'pitch') {
+                 starters[sourceInfo.posId] = { playerId: targetPlayerId, coords: starters[sourceInfo.posId]?.coords || null };
+            }
+        }
+        renderAll();
+    }
+    
+    function makeMarkerMovable(container) {
+        const onMouseDown = (e) => {
+            if (e.target.tagName !== 'DIV' || !e.target.classList.contains('player-marker')) return;
+            container.classList.add('is-moving');
+            const onMouseMove = (moveEvent) => {
+                const pitchRect = pitch.getBoundingClientRect();
+                let newLeft = Math.max(0, Math.min(100, (moveEvent.clientX - pitchRect.left) / pitchRect.width * 100));
+                let newTop = Math.max(0, Math.min(100, (moveEvent.clientY - pitchRect.top) / pitchRect.height * 100));
+                container.style.left = `${newLeft}%`; container.style.top = `${newTop}%`;
+            };
+            const onMouseUp = () => {
+                container.classList.remove('is-moving');
+                document.removeEventListener('mousemove', onMouseMove);
+                const posId = container.dataset.posId;
+                const currentLeftPerc = parseFloat(container.style.left);
+                const currentTopPerc = parseFloat(container.style.top);
+
+                if (currentOrientation === 'vertical') {
+                    starters[posId].coords = { top: currentLeftPerc, left: (100 - currentTopPerc) / 0.9 };
+                } else {
+                    starters[posId].coords = { top: currentTopPerc, left: currentLeftPerc / 0.9 };
+                }
+            };
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp, { once: true });
+        };
+        container.addEventListener('mousedown', onMouseDown);
+    }
+    
+    function unassignPlayer(playerId) {
+        for (const posId in starters) { if (starters[posId]?.playerId === playerId) { delete starters[posId]; return; } }
+        for (const category in substitutes) { substitutes[category] = substitutes[category].filter(id => id !== playerId); }
+    }
+    
+    function addPlayer() { 
+        const number = sidebarNewPlayerNumberInput.value; 
+        const name = sidebarNewPlayerNameInput.value.trim(); 
+        if (!number || !name) { alert('背番号と選手名を入力してください。'); return; } 
+        squad.push({ id: `p_${Date.now()}`, number: parseInt(number), name: name }); 
+        sidebarNewPlayerNumberInput.value = ''; 
+        sidebarNewPlayerNameInput.value = ''; 
+        sidebarNewPlayerNumberInput.focus(); 
+        saveSquadToLocalStorage(); 
+        renderAll(); 
+    }
+    
+    function deletePlayer(playerId) {
+        if (confirm('この選手をリストから削除しますか？配置もリセットされます。')) {
+            squad = squad.filter(p => p.id !== playerId);
+            unassignPlayer(playerId);
+            saveSquadToLocalStorage(); renderAll();
+        }
+    }
+    
+    function handleMouseDown(e, playerId) { isDragging = false; longPressTimer = setTimeout(() => { if (!isDragging) { openEditModal(playerId); } }, 500); }
+    function handleMouseUp() { clearTimeout(longPressTimer); }
+    function handleMouseMove() { isDragging = true; clearTimeout(longPressTimer); }
+
+    function openEditModal(playerId) {
+        const player = squad.find(p => p.id === playerId);
+        if (!player) return;
+        editingPlayerId = playerId;
+        editPlayerNumberInput.value = player.number;
+        editPlayerNameInput.value = player.name;
+        editPlayerModal.style.display = 'flex';
+    }
+
+    function closeEditModal() { 
+        clearInterval(numberChangeInterval);
+        editPlayerModal.style.display = 'none'; 
+        editingPlayerId = null; 
+    }
+
+    savePlayerChangesBtn.addEventListener('click', () => {
+        if (!editingPlayerId) return;
+        const player = squad.find(p => p.id === editingPlayerId);
+        if (player) {
+            player.number = parseInt(editPlayerNumberInput.value, 10) || player.number;
+            player.name = editPlayerNameInput.value.trim() || player.name;
+            saveSquadToLocalStorage(); 
+            renderAll();
+        }
+        closeEditModal();
+    });
+    
+    deletePlayerBtnModal.addEventListener('click', () => {
+        if(editingPlayerId) {
+            deletePlayer(editingPlayerId);
+            closeEditModal();
+        }
+    });
+
+    const changeNumber = (amount) => {
+        let currentValue = parseInt(editPlayerNumberInput.value, 10) || 0;
+        let newValue = currentValue + amount;
+        if (newValue < 1) newValue = 1;
+        editPlayerNumberInput.value = newValue;
+    };
+    
+    const stopInterval = () => clearInterval(numberChangeInterval);
+
+    incrementBtn.addEventListener('click', () => changeNumber(1));
+    decrementBtn.addEventListener('click', () => changeNumber(-1));
+
+    incrementBtn.addEventListener('mousedown', () => { numberChangeInterval = setInterval(() => changeNumber(1), 100); });
+    decrementBtn.addEventListener('mousedown', () => { numberChangeInterval = setInterval(() => changeNumber(-1), 100); });
+    
+    ['mouseup', 'mouseleave', 'touchend'].forEach(event => {
+        incrementBtn.addEventListener(event, stopInterval);
+        decrementBtn.addEventListener(event, stopInterval);
+    });
+
+
+    function saveSquadToLocalStorage() { localStorage.setItem('tacticalCanvasSquad', JSON.stringify(squad)); }
+    function loadSquadFromLocalStorage() { const savedSquad = localStorage.getItem('tacticalCanvasSquad'); squad = savedSquad ? JSON.parse(savedSquad) : []; }
+    
+    function openShareModal() { shareModalOverlay.style.display = 'flex'; }
+    function closeShareModal() { shareModalOverlay.style.display = 'none'; }
+    
+    function copySquadUrlToClipboard() {
+        if (squad.length === 0) { alert('共有する選手がいません。'); return; }
+        try {
+            const jsonString = JSON.stringify(squad);
+            const compressedData = LZString.compressToEncodedURIComponent(jsonString);
+            const baseUrl = window.location.href.split('?')[0].split('#')[0];
+            const shareUrl = `${baseUrl}?data=${compressedData}`;
+
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                alert('共有用URLをクリップボードにコピーしました！');
+                closeShareModal();
+            }).catch(err => alert('URLのコピーに失敗しました。'));
+        } catch (e) {
+            alert('URLの生成に失敗しました。');
+        }
+    }
+
+    function copySquadToClipboard() { if (squad.length === 0) { alert('コピーする選手がいません。'); return; } navigator.clipboard.writeText(JSON.stringify(squad)).then(() => { alert('クリップボードにコピーしました！'); closeShareModal(); }).catch(() => alert('コピーに失敗しました。')); }
+    function exportSquadToFile() { if (squad.length === 0) { alert('エクスポートする選手がいません。'); return; } const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(squad)); const downloadAnchorNode = document.createElement('a'); downloadAnchorNode.setAttribute("href", dataStr); downloadAnchorNode.setAttribute("download", "squad.json"); document.body.appendChild(downloadAnchorNode); downloadAnchorNode.click(); downloadAnchorNode.remove(); closeShareModal(); }
+    
+    function processImport(squadData) { if (Array.isArray(squadData) && squadData.every(p => p.id && typeof p.number !== 'undefined' && p.name)) { squad = squadData; starters = {}; substitutes = { GK: [], DF: [], MF: [], FW: [] }; saveSquadToLocalStorage(); renderAll(); alert(`${squad.length}人の選手をインポートしました。`); closeShareModal(); } else { alert('無効なデータ形式です。'); } }
+    function importFromFile(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (e) => { try { processImport(JSON.parse(e.target.result)); } catch (error) { alert('ファイルの読み込みに失敗しました。'); } }; reader.readAsText(file); event.target.value = ''; }
+    async function importFromClipboard() { try { const text = await navigator.clipboard.readText(); if (text) { processImport(JSON.parse(text)); } else { alert('クリップボードが空です。'); } } catch (error) { alert('クリップボードの読み込みに失敗しました。'); } }
+
+    function checkUrlForSquadData() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const data = urlParams.get('data');
+
+        if (data) {
+            try {
+                const decompressedData = LZString.decompressFromEncodedURIComponent(data);
+                const importedSquad = JSON.parse(decompressedData);
+
+                if (Array.isArray(importedSquad) && importedSquad.every(p => p.id && typeof p.number !== 'undefined' && p.name)) {
+                    importPreviewList.innerHTML = '<ul style="list-style: none; padding: 0;">' + importedSquad.sort((a,b) => a.number - b.number).map(p => `<li><strong>No.${p.number}</strong> ${p.name}</li>`).join('') + '</ul>';
+                    importConfirmModal.style.display = 'flex';
+
+                    confirmImportBtn.onclick = () => {
+                        squad = importedSquad;
+                        starters = {}; substitutes = { GK: [], DF: [], MF: [], FW: [] };
+                        saveSquadToLocalStorage(); renderAll();
+                        alert(`${squad.length}人の選手をインポートしました。`);
+                        closeImportConfirmModal();
+                        history.replaceState(null, '', window.location.pathname);
+                    };
+
+                    cancelImportBtn.onclick = () => {
+                        closeImportConfirmModal();
+                        history.replaceState(null, '', window.location.pathname);
+                    };
+                } else {
+                    history.replaceState(null, '', window.location.pathname);
+                }
+            } catch (e) {
+                history.replaceState(null, '', window.location.pathname);
+            }
+        }
+    }
+    function closeImportConfirmModal() { importConfirmModal.style.display = 'none'; }
+    
+    saveImageBtn.addEventListener('click', () => {
+        let subListHtml = '';
+        ['GK', 'DF', 'MF', 'FW'].forEach(cat => { if (substitutes[cat].length > 0) { const names = substitutes[cat].map(id => squad.find(p => p.id === id)).filter(Boolean).map(p => `${p.number} ${p.name}`).join(' / '); subListHtml += `<div class="subs-pos-group"><span class="pos-label">${cat}:</span><span class="names">${names}</span></div>`; } });
+        const captureSubs = document.getElementById('capture-subs');
+        captureSubs.innerHTML = subListHtml ? `<h4>SUBSTITUTES</h4><div class="subs-grid">${subListHtml}</div>` : '';
+        const captureTitle = document.getElementById('capture-title');
+        const titleInput = document.getElementById('title-input');
+        captureTitle.textContent = titleInput.value || titleInput.placeholder;
+        captureTitle.style.display = 'block';
+
+        const watermark = document.getElementById('capture-watermark');
+        watermark.textContent = "Created with XISync";
+        
+        const captureArea = document.getElementById('capture-area');
+        captureArea.classList.add('is-capturing');
+
+        html2canvas(captureArea, { backgroundColor: '#4a8d4d', scale: 3 }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = `${(titleInput.value || 'tactical-canvas').replace(/\s/g, '_')}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }).finally(() => {
+            captureArea.classList.remove('is-capturing');
+            captureTitle.style.display = 'none';
+        });
+    });
+    
+    function updateModeToggleBtn() {
+        modeToggleBtn.innerHTML = svgIcons[currentDragMode];
+    }
+    
+    function showModeToast() {
+        clearTimeout(toastTimer);
+        modeToast.textContent = (currentDragMode === 'swap') ? '選手交代モード' : 'マーカー移動モード';
+        modeToast.classList.add('show');
+        toastTimer = setTimeout(() => {
+            modeToast.classList.remove('show');
+        }, 1500);
+    }
+
+    // --- イベントリスナー設定 ---
+    orientationRadios.forEach(radio => radio.addEventListener('change', (e) => { currentOrientation = e.target.value; body.dataset.layoutMode = currentOrientation; renderAll(); }));
+    formationSelect.addEventListener('change', () => { starters = {}; renderAll(); });
+    
+    sidebarAddPlayerBtn.addEventListener('click', addPlayer);
+    sidebarNewPlayerNameInput.addEventListener('keypress', (e) => e.key === 'Enter' && addPlayer());
+    
+    [leftPanelElements, rightPanelElements].forEach(elements => {
+        elements.subDropZones.forEach(zone => {
+            zone.addEventListener('dragover', handleDragOver);
+            zone.addEventListener('dragleave', handleDragLeave);
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault(); e.stopPropagation();
+                e.currentTarget.classList.remove('drop-target-hover');
+                const sourceInfo = JSON.parse(e.dataTransfer.getData('application/json'));
+                unassignPlayer(sourceInfo.playerId);
+                substitutes[zone.dataset.posCategory].push(sourceInfo.playerId);
+                renderAll();
+            });
+        });
+        elements.shareDataBtn.addEventListener('click', openShareModal);
+        elements.openSidebarBtn.addEventListener('click', () => playerListSidebar.classList.add('is-open'));
+    });
+    
+    rightPanelElements.resetAllBtn.addEventListener('click', () => {
+        if(confirm('すべての選手の配置をリセットしますか？')){
+            starters = {};
+            substitutes = { GK: [], DF: [], MF: [], FW: [] };
+            renderAll();
+        }
+    });
+
+    modeToggleBtn.addEventListener('click', () => {
+        currentDragMode = (currentDragMode === 'position') ? 'swap' : 'position';
+        body.dataset.dragMode = currentDragMode;
+        updateModeToggleBtn();
+        showModeToast();
+        renderAll();
+    });
+
+    modalCloseBtn.addEventListener('click', closeShareModal);
+    shareModalOverlay.addEventListener('click', (e) => e.target === shareModalOverlay && closeShareModal());
+    copyUrlBtn.addEventListener('click', copySquadUrlToClipboard);
+    copySquadBtn.addEventListener('click', copySquadToClipboard);
+    exportSquadBtn.addEventListener('click', exportSquadToFile);
+    importSquadInput.addEventListener('change', importFromFile);
+    importFromClipboardBtn.addEventListener('click', importFromClipboard);
+    sidebarCloseBtn.addEventListener('click', () => playerListSidebar.classList.remove('is-open'));
+    editModalCloseBtn.addEventListener('click', closeEditModal);
+    editPlayerModal.addEventListener('click', (e) => { if (e.target === editPlayerModal) closeEditModal(); });
+    importConfirmModal.addEventListener('click', (e) => e.target === importConfirmModal && closeImportConfirmModal());
+    
+    // --- 初期化処理 ---
+    checkUrlForSquadData();
+    loadSquadFromLocalStorage();
+    body.dataset.layoutMode = document.querySelector('input[name="orientation"]:checked').value;
+    body.dataset.dragMode = currentDragMode;
+    updateModeToggleBtn();
+    renderAll();
+});
+</script>
+</body>
+</html>
