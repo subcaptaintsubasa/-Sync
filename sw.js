@@ -1,7 +1,8 @@
 // --- sw.js ---
 const CACHE_NAME = 'xisync-cache-v2';
 const urlsToCache = [
-    './index.html', // URL encoded filename
+    './', // ルートディレクトリ (index.html を意味します)
+    './index.html', // 念のため index.html も明示的に追加
     'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
     'https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js'
 ];
