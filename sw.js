@@ -1,7 +1,7 @@
 // --- sw.js ---
 const CACHE_NAME = 'xisync-cache-v2';
 const urlsToCache = [
-    './soccer%20member.html', // URL encoded filename
+    './index.html', // URL encoded filename
     'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
     'https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js'
 ];
