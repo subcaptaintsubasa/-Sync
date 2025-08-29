@@ -284,9 +284,89 @@
         .sidebar-header .title-bar h3 {
             margin-right: auto;
         }
+        /* (既存のスタイルの最後に追加) */
+
+/* --- スマホ開発中メッセージバナーのスタイル --- */
+#mobile-notice-banner {
+    display: none; /* PCでは非表示がデフォルト */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #fffde7; /* 薄い黄色 */
+    color: #5d4037; /* 暗めの茶色 */
+    padding: 12px 50px 12px 15px; /* 右側に閉じるボタンのスペースを確保 */
+    box-sizing: border-box;
+    z-index: 5000; /* 最前面に表示 */
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.15);
+    border-top: 3px solid #fbc02d; /* 目立つ黄色の線 */
+    align-items: center;
+}
+
+#mobile-notice-banner .banner-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+#mobile-notice-banner .icon {
+    font-size: 24px;
+    line-height: 1;
+}
+
+#mobile-notice-banner p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.4;
+    font-weight: 500;
+}
+
+#close-notice-btn {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    color: #757575;
+    font-size: 24px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    transition: background-color 0.2s;
+    /* 既存のボタンリセット */
+    all: revert; 
+    /* 上記で動かない場合の個別スタイル */
+     position: absolute; top: 50%; right: 10px; transform: translateY(-50%); width: 32px; height: 32px; background: none; border: none; font-size: 24px; cursor: pointer; padding: 0; 
+}
+#close-notice-btn:hover {
+    background-color: rgba(0,0,0,0.1);
+}
+
+/* メディアクエリでスマホの場合のみ表示 */
+@media (max-width: 768px) {
+    #mobile-notice-banner {
+        display: flex;
+    }
+    
+    /* バナーが表示された分、ページ下部に余白を追加 */
+    body {
+        padding-bottom: 70px; /* バナーの高さに応じて調整 */
+    }
+}
     </style>
 </head>
 <body data-layout-mode="vertical" data-drag-mode="swap">
+        <div id="mobile-notice-banner">
+        <div class="banner-content">
+            <span class="icon">⚠️</span>
+            <p>現在、スマートフォン表示は開発中です。一部機能が正常に動作しない場合があります。</p>
+        </div>
+        <button id="close-notice-btn" title="閉じる">&times;</button>
+    </div>
     <div class="sidebar-handle"></div>
     <div class="container">
         <div class="left-panel">
@@ -492,6 +572,19 @@ const App = {
 
     init() {
         this.cacheElements();
+            const noticeBanner = document.getElementById('mobile-notice-banner');
+    const closeNoticeBtn = document.getElementById('close-notice-btn');
+    if (noticeBanner && closeNoticeBtn) {
+        // セッションストレージを使って、一度閉じたらそのセッションでは表示しないようにする
+        if (sessionStorage.getItem('mobileNoticeClosed') === 'true') {
+            noticeBanner.style.display = 'none';
+        }
+
+        closeNoticeBtn.addEventListener('click', () => {
+            noticeBanner.style.display = 'none';
+            sessionStorage.setItem('mobileNoticeClosed', 'true');
+        });
+    }
         this.defineConstants();
         this.clonePanels();
         this.loadState();
