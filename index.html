@@ -106,6 +106,10 @@
         
         button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background-color 0.3s, transform 0.1s; }
         button:active { transform: scale(0.98); }
+        .unassign-btn-sub:active,
+        .edit-player-btn:active {
+            transform: translateY(-50%) scale(1);
+        }
         .btn-primary { background-color: var(--primary-color); color: white; } .btn-secondary { background-color: var(--secondary-color); color: white; } .btn-danger { background-color: var(--danger-color); color: white; }
         .orientation-toggle { display: flex; gap: 10px; }
         .orientation-toggle input { display: none; }
@@ -120,7 +124,8 @@
         .player-list-item .num, .player-list-item .name { padding: 4px; } .player-list-item .num { font-weight: bold; width: 30px; text-align: right; margin-right: 5px;}
         .player-list-item .name { flex-grow: 1; position: relative;}
         .player-list-item.is-assigned .num, .player-list-item.is-assigned .name { color: #888; } /* Assigned players are greyed out */
-        .edit-player-btn { background: none; border: none; cursor: pointer; padding: 5px; width: auto; position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: #888; opacity: 0; transition: opacity 0.2s; }
+        .edit-player-btn { background: none; border: none; cursor: pointer; width: 30px; height: 30px; position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: #888; opacity: 0; transition: opacity 0.2s, background-color 0.2s; display: flex; align-items: center; justify-content: center; border-radius: 50%; padding: 0; }
+        .edit-player-btn:hover { background-color: #f0f0f0; }
         .player-list-item:hover .edit-player-btn { opacity: 1; }
         .edit-player-btn:hover { color: var(--primary-color); }
         
@@ -134,7 +139,7 @@
         .sub-drop-zone.drop-target-hover { background-color: #e9f5ff; border-color: var(--primary-color); }
         .substitute-item { position: relative; display: inline-flex; align-items: center; background-color: #e9ecef; border-radius: 15px; padding: 5px 25px 5px 10px; font-size: 14px; user-select: none; cursor: grab; }
         .substitute-item .num { font-weight: bold; margin-right: 8px; }
-        .unassign-btn-sub { position: absolute; top: 50%; right: 4px; transform: translateY(-50%); width: 18px; height: 18px; background-color: #ccc; color: white; border-radius: 50%; border: none; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 14px; line-height: 1; padding: 0; }
+        .unassign-btn-sub { position: absolute; top: 50%; right: 4px; transform: translateY(-50%); width: 22px; height: 22px; background-color: #ccc; color: white; border-radius: 50%; border: none; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 16px; line-height: 1; padding: 0; transition: background-color 0.2s; }
         .unassign-btn-sub:hover { background-color: #e74c3c; }
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: none; justify-content: center; align-items: center; }
@@ -321,10 +326,7 @@
                 <div class="control-group">
                     <label>控え選手</label>
                     <div id="substitutes-container">
-                        <div class="sub-category"><div class="sub-category-label">GK</div><div class="sub-drop-zone" data-pos-category="GK"></div></div>
-                        <div class="sub-category"><div class="sub-category-label">DF</div><div class="sub-drop-zone" data-pos-category="DF"></div></div>
-                        <div class="sub-category"><div class="sub-category-label">MF</div><div class="sub-drop-zone" data-pos-category="MF"></div></div>
-                        <div class="sub-category"><div class="sub-category-label">FW</div><div class="sub-drop-zone" data-pos-category="FW"></div></div>
+                        <div class="sub-drop-zone" data-pos-category="ALL"></div>
                     </div>
                 </div>
             </div>
@@ -349,6 +351,12 @@
             <div class="add-player-form">
                 <input type="number" id="sidebar-new-player-number" placeholder="No." min="1" inputmode="numeric" style="ime-mode: inactive;">
                 <input type="text" id="sidebar-new-player-name" placeholder="選手名">
+                <select id="sidebar-new-player-pos" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    <option value="FW">FW</option>
+                    <option value="MF">MF</option>
+                    <option value="DF">DF</option>
+                    <option value="GK">GK</option>
+                </select>
                 <button id="sidebar-add-player-btn" class="btn-primary">+</button>
             </div>
         </div>
@@ -379,6 +387,15 @@
                 <div class="form-group">
                     <label for="edit-player-name">選手名</label>
                     <input type="text" id="edit-player-name">
+                </div>
+                <div class="form-group">
+                    <label for="edit-player-pos">ポジション</label>
+                    <select id="edit-player-pos" style="width: 100%; padding: 12px; font-size: 16px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box;">
+                        <option value="FW">FW</option>
+                        <option value="MF">MF</option>
+                        <option value="DF">DF</option>
+                        <option value="GK">GK</option>
+                    </select>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
                     <button id="save-player-changes-btn" class="btn-primary">変更を保存</button>
@@ -495,11 +512,11 @@ const App = {
             sidebar: {
                 el: query('#player-list-sidebar'), list: query('#sidebar-player-list'),
                 addBtn: query('#sidebar-add-player-btn'), numberInput: query('#sidebar-new-player-number'),
-                nameInput: query('#sidebar-new-player-name')
+                nameInput: query('#sidebar-new-player-name'), posSelect: query('#sidebar-new-player-pos')
             },
             editModal: {
                 overlay: query('#edit-player-modal'), numberInput: query('#edit-player-number'),
-                nameInput: query('#edit-player-name'), saveBtn: query('#save-player-changes-btn'),
+                nameInput: query('#edit-player-name'), posSelect: query('#edit-player-pos'), saveBtn: query('#save-player-changes-btn'),
                 deleteBtn: query('#delete-player-btn-modal'), incrementBtn: query('#increment-btn'), decrementBtn: query('#decrement-btn')
             },
             importConfirmModal: {
@@ -790,28 +807,28 @@ const App = {
     },
 
     renderSubstitutes() {
-        document.querySelectorAll('.sub-drop-zone').forEach(zone => {
-            zone.innerHTML = '';
-            const category = zone.dataset.posCategory;
-            (this.state.substitutes[category] || []).forEach(playerId => {
-                const player = this.state.squad.find(p => p.id === playerId);
-                if (!player) return;
-                const subItem = document.createElement('div');
-                subItem.className = 'substitute-item';
-                subItem.dataset.playerId = playerId;
-                subItem.draggable = true;
-                subItem.addEventListener('dragstart', (e) => this.handleDragStart(e, { type: 'substitute', playerId, category }));
-                subItem.innerHTML = `
-                    <span class="num">${player.number}</span>
-                    <span class="name">${player.name}</span>
-                    <button class="unassign-btn-sub">&times;</button>`;
-                subItem.querySelector('.unassign-btn-sub').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.unassignPlayer(playerId);
-                    this.renderAll();
-                });
-                zone.appendChild(subItem);
+        const zone = document.querySelector('.sub-drop-zone');
+        zone.innerHTML = '';
+        const allSubIds = Object.values(this.state.substitutes).flat();
+        
+        allSubIds.forEach(playerId => {
+            const player = this.state.squad.find(p => p.id === playerId);
+            if (!player) return;
+            const subItem = document.createElement('div');
+            subItem.className = 'substitute-item';
+            subItem.dataset.playerId = playerId;
+            subItem.draggable = true;
+            subItem.addEventListener('dragstart', (e) => this.handleDragStart(e, { type: 'substitute', playerId, category: player.posCategory }));
+            subItem.innerHTML = `
+                <span class="num">${player.number}</span>
+                <span class="name">${player.name}</span>
+                <button class="unassign-btn-sub">&times;</button>`;
+            subItem.querySelector('.unassign-btn-sub').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.unassignPlayer(playerId);
+                this.renderAll();
             });
+            zone.appendChild(subItem);
         });
     },
 
@@ -863,9 +880,17 @@ const App = {
         const zone = e.currentTarget;
         zone.classList.remove('drop-target-hover');
         const data = JSON.parse(e.dataTransfer.getData('application/json'));
-        this.unassignPlayer(data.playerId);
-        this.state.substitutes[zone.dataset.posCategory].push(data.playerId);
-        this.renderAll();
+        const player = this.state.squad.find(p => p.id === data.playerId);
+
+        if (player) {
+            this.unassignPlayer(data.playerId);
+            // 選手のポジションカテゴリに基づいて正しい配列に追加
+            if (!this.state.substitutes[player.posCategory]) {
+                this.state.substitutes[player.posCategory] = [];
+            }
+            this.state.substitutes[player.posCategory].push(data.playerId);
+            this.renderAll();
+        }
     },
 
     unassignPlayer(playerId) {
@@ -883,9 +908,10 @@ const App = {
     addPlayer() {
         const number = this.els.sidebar.numberInput.value;
         const name = this.els.sidebar.nameInput.value.trim();
+        const posCategory = this.els.sidebar.posSelect.value; // 追加
         if (!number || !name) { alert('背番号と選手名を入力してください。'); return; }
         if (this.state.squad.some(p => p.number === parseInt(number))) { alert('この背番号は既に使用されています。'); return; }
-        this.state.squad.push({ id: `p_${Date.now()}`, number: parseInt(number), name });
+        this.state.squad.push({ id: `p_${Date.now()}`, number: parseInt(number), name, posCategory }); // 変更
         this.els.sidebar.numberInput.value = '';
         this.els.sidebar.nameInput.value = '';
         this.els.sidebar.numberInput.focus();
@@ -1015,6 +1041,7 @@ const App = {
         this.editingPlayerId = playerId;
         this.els.editModal.numberInput.value = player.number;
         this.els.editModal.nameInput.value = player.name;
+        this.els.editModal.posSelect.value = player.posCategory || 'FW'; // 追加
         this.openModal(this.els.editModal.overlay);
     },
 
@@ -1024,11 +1051,13 @@ const App = {
         if (player) {
             const newNumber = parseInt(this.els.editModal.numberInput.value, 10);
             const newName = this.els.editModal.nameInput.value.trim();
+            const newPosCategory = this.els.editModal.posSelect.value; // 追加
             if (this.state.squad.some(p => p.number === newNumber && p.id !== player.id)) {
                 alert('その背番号は既に使用されています。'); return;
             }
             player.number = newNumber || player.number;
             player.name = newName || player.name;
+            player.posCategory = newPosCategory; // 追加
             this.renderAll();
         }
         this.closeAllModals();
@@ -1064,39 +1093,57 @@ const App = {
     },
     
     saveImage() {
+        const originalArea = document.getElementById('capture-area');
+        // メモリ上で要素のクローンを作成
+        const cloneArea = originalArea.cloneNode(true);
+        cloneArea.style.position = 'absolute';
+        cloneArea.style.left = '-9999px'; // 画面外に配置
+        cloneArea.style.top = '0px';
+        cloneArea.style.width = originalArea.offsetWidth + 'px'; // 元のサイズを維持
+        document.body.appendChild(cloneArea);
+
+        // クローンに対してのみ、画像出力用の変更を加える
         let subsHTML = '';
         ['GK', 'DF', 'MF', 'FW'].forEach(pos => {
-            if (this.state.substitutes[pos] && this.state.substitutes[pos].length > 0) {
-                const names = this.state.substitutes[pos]
-                    .map(id => this.state.squad.find(p => p.id === id))
-                    .filter(Boolean)
-                    .map(p => `${p.number} ${p.name}`).join(' / ');
+            const playersInPos = (this.state.substitutes[pos] || [])
+                .map(id => this.state.squad.find(p => p.id === id))
+                .filter(Boolean);
+            
+            if (playersInPos.length > 0) {
+                const names = playersInPos.map(p => `${p.number} ${p.name}`).join(' / ');
                 subsHTML += `<div class="subs-pos-group"><span class="pos-label">${pos}:</span><span class="names">${names}</span></div>`;
             }
         });
-        const captureSubs = document.getElementById('capture-subs');
-        captureSubs.innerHTML = subsHTML ? `<h4>SUBSTITUTES</h4><div class="subs-grid">${subsHTML}</div>` : '';
 
-        const captureTitle = document.getElementById('capture-title');
+        const captureSubs = cloneArea.querySelector('#capture-subs');
+        if (captureSubs) {
+            captureSubs.innerHTML = subsHTML ? `<h4>SUBSTITUTES</h4><div class="subs-grid">${subsHTML}</div>` : '';
+        }
+
+        const captureTitle = cloneArea.querySelector('#capture-title');
         const titleInput = this.els.titleInput;
-        captureTitle.textContent = titleInput.value || titleInput.placeholder;
-        captureTitle.style.display = 'block';
+        if (captureTitle) {
+            captureTitle.textContent = titleInput.value || titleInput.placeholder;
+            captureTitle.style.display = 'block';
+        }
         
-        const watermark = document.getElementById('capture-watermark');
-        watermark.textContent = "Created with XISync";
+        const watermark = cloneArea.querySelector('#capture-watermark');
+        if (watermark) {
+            watermark.textContent = "Created with XISync";
+        }
+        
+        cloneArea.classList.add('is-capturing');
 
-        const captureArea = document.getElementById('capture-area');
-        captureArea.classList.add('is-capturing');
-
-        html2canvas(captureArea, { backgroundColor: '#4a8d4d', scale: 3 }).then(canvas => {
+        // クローンした要素を画像化
+        html2canvas(cloneArea, { backgroundColor: '#4a8d4d', scale: 3 }).then(canvas => {
             const link = document.createElement('a');
             const fileName = (titleInput.value || 'tactical-canvas').replace(/[\\/:"*?<>|]/g, '').replace(/\s+/g, '_');
             link.download = `${fileName}.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
         }).finally(() => {
-            captureArea.classList.remove('is-capturing');
-            captureTitle.style.display = 'none';
+            // 終わったらクローンを削除
+            document.body.removeChild(cloneArea);
         });
     },
     
