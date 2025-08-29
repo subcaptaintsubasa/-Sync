@@ -1374,25 +1374,38 @@ const App = {
         }
     },
 
-    setupMouseSidebar() {
-        const sidebar = this.els.sidebar.el;
-        const handle = this.els.sidebarHandle;
+setupMouseSidebar() {
+    const sidebar = this.els.sidebar.el;
+    const handle = this.els.sidebarHandle;
 
-        handle.addEventListener('mouseenter', () => {
-            this.sidebarHoverTimer = setTimeout(() => {
-                this.openSidebar();
-            }, 200);
-        });
+    handle.addEventListener('mouseenter', () => {
+        this.sidebarHoverTimer = setTimeout(() => {
+            this.openSidebar();
+        }, 200);
+    });
 
-        handle.addEventListener('mouseleave', () => clearTimeout(this.sidebarHoverTimer));
+    handle.addEventListener('mouseleave', () => clearTimeout(this.sidebarHoverTimer));
 
-        sidebar.addEventListener('mouseleave', () => {
-            clearTimeout(this.sidebarHoverTimer);
-            this.closeSidebar();
-        });
+    sidebar.addEventListener('mouseleave', () => {
+        // ▼▼▼ ここからが変更点 ▼▼▼
+        // アクティブな要素がサイドバー内の入力フォームでないかチェック
+        const activeEl = document.activeElement;
+        const isTypingInSidebar = 
+            activeEl === this.els.sidebar.numberInput ||
+            activeEl === this.els.sidebar.nameInput ||
+            activeEl === this.els.sidebar.posSelect;
 
-        this.els.pinSidebarBtn.addEventListener('click', () => this.toggleSidebarPin());
-    },
+        if (isTypingInSidebar) {
+            return; // 入力中は閉じない
+        }
+        // ▲▲▲ ここまでが変更点 ▲▲▲
+
+        clearTimeout(this.sidebarHoverTimer);
+        this.closeSidebar();
+    });
+
+    this.els.pinSidebarBtn.addEventListener('click', () => this.toggleSidebarPin());
+},
 
     setupTouchSidebar() {
         const sidebar = this.els.sidebar.el;
