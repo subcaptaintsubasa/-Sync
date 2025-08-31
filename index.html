@@ -945,6 +945,7 @@ const App = {
     },
     
     bindEvents() {
+        document.addEventListener('dragend', this.handleDragEnd.bind(this));
             if (this.isMobile) {
         // Title sync
         this.els.mobile.titleInput.addEventListener('input', (e) => this.els.titleInput.value = e.target.value);
@@ -962,6 +963,14 @@ const App = {
         // Player List Panel
         this.els.mobile.playerListBtn.addEventListener('click', () => {
             this.els.mobile.playerListPanel.classList.toggle('is-open');
+        });
+        this.els.mobile.addPlayerBtn.addEventListener('click', () => {
+            this.editingPlayerId = null; // 新規追加モードに設定
+            this.els.editModal.numberInput.value = '';
+            this.els.editModal.nameInput.value = '';
+            this.els.editModal.posSelect.value = 'FW';
+            this.openModal(this.els.editModal.overlay);
+            this.els.mobile.playerListPanel.classList.remove('is-open'); // パネルを閉じる
         });
 
         // Formation Popover
@@ -1319,23 +1328,7 @@ renderSubstitutes() {
             // カテゴリエリア自体をドロップゾーンにする
             categoryEl.addEventListener('dragover', this.handleDragOver.bind(this));
             categoryEl.addEventListener('dragleave', this.handleDragLeave.bind(this));
-            categoryEl.addEventListener('drop', (e) => {
-                 e.preventDefault(); e.stopPropagation();
-                 categoryEl.classList.remove('drop-target-hover');
-                 try {
-                     const data = JSON.parse(e.dataTransfer.getData('application/json'));
-                     const player = this.state.squad.find(p => p.id === data.playerId);
-                     if (player && player.posCategory === pos) {
-                         this.unassignPlayer(data.playerId);
-                         this.state.substitutes[pos].push(data.playerId);
-                         this.renderAll();
-                     } else if (player) {
-                         // Optional: Show a message that position doesn't match
-                         console.log("Position mismatch");
-                     }
-                 } catch (err) { /* ignore */ }
-            });
-
+            categoryEl.addEventListener('drop', (e) => this.handleDropOnSubZone(e, pos));
             const playersInPos = (this.state.substitutes[pos] || [])
                 .map(id => this.state.squad.find(p => p.id === id)).filter(Boolean);
 
@@ -1636,23 +1629,38 @@ handleDropOnSubZone(e, mobilePosCategory = null) {
         this.openModal(this.els.editModal.overlay);
     },
 
-    savePlayerChanges() {
-        if (!this.editingPlayerId) return;
+// 修正箇所: savePlayerChanges メソッドを丸ごと置き換え
+
+savePlayerChanges() {
+    const newNumber = parseInt(this.els.editModal.numberInput.value, 10);
+    const newName = this.els.editModal.nameInput.value.trim();
+    const newPosCategory = this.els.editModal.posSelect.value;
+
+    if (!newNumber || !newName) {
+        alert('背番号と選手名を入力してください。');
+        return;
+    }
+
+    if (this.editingPlayerId) { // --- 更新の場合 ---
         const player = this.state.squad.find(p => p.id === this.editingPlayerId);
         if (player) {
-            const newNumber = parseInt(this.els.editModal.numberInput.value, 10);
-            const newName = this.els.editModal.nameInput.value.trim();
-            const newPosCategory = this.els.editModal.posSelect.value; // 追加
             if (this.state.squad.some(p => p.number === newNumber && p.id !== player.id)) {
                 alert('その背番号は既に使用されています。'); return;
             }
-            player.number = newNumber || player.number;
-            player.name = newName || player.name;
-            player.posCategory = newPosCategory; // 追加
-            this.renderAll();
+            player.number = newNumber;
+            player.name = newName;
+            player.posCategory = newPosCategory;
         }
-        this.closeAllModals();
-    },
+    } else { // --- 新規追加の場合 ---
+        if (this.state.squad.some(p => p.number === newNumber)) {
+            alert('この背番号は既に使用されています。'); return;
+        }
+        this.state.squad.push({ id: `p_${Date.now()}`, number: newNumber, name: newName, posCategory: newPosCategory });
+    }
+
+    this.renderAll();
+    this.closeAllModals();
+},
 
     deletePlayerFromModal() {
         if (this.editingPlayerId && confirm('この選手をリストから完全に削除しますか？\nこの操作は元に戻せません。')) {
