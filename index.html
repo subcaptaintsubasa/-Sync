@@ -357,9 +357,282 @@
         padding-bottom: 70px; /* バナーの高さに応じて調整 */
     }
 }
+/* --- START: スマートフォンUIスタイル --- */
+
+/* デフォルトではスマホ用UIを非表示に */
+.mobile-header,
+#mobile-subs-area,
+#mobile-player-list-panel,
+#mobile-formation-btn,
+#mobile-player-list-btn,
+#mobile-unassign-bumper,
+.pc-ui-wrapper {
+    display: none;
+}
+body.is-mobile .pc-ui-wrapper {
+    display: none;
+}
+body.is-mobile .mobile-header,
+body.is-mobile #mobile-subs-area,
+body.is-mobile #mobile-player-list-btn {
+    display: flex;
+}
+body.is-mobile #mobile-formation-btn,
+body.is-mobile #mode-toggle-btn { /* 既存のFABもモバイルで表示 */
+    display: flex;
+}
+
+@media (max-width: 768px) {
+    body {
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        height: 100vh; /* スマホの高さいっぱいに */
+    }
+
+    /* PC用UIを非表示にし、スマホ用を表示するクラス */
+    body.is-mobile {
+        --safe-area-inset-top: env(safe-area-inset-top, 0px);
+        --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    
+    .mobile-header {
+        position: sticky;
+        top: 0;
+        width: 100%;
+        padding: 10px 15px;
+        padding-top: calc(10px + var(--safe-area-inset-top));
+        background: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        z-index: 1100;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-shrink: 0;
+    }
+    #mobile-title-input {
+        flex-grow: 1;
+        border: none;
+        background: transparent;
+        font-size: 18px;
+        font-weight: bold;
+        outline: none;
+    }
+
+    .main-content { /* スマホではメインコンテンツがFlexboxの子になる */
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+        width: 100%;
+        min-height: 0; /* flex-growを正しく効かせるため */
+        padding: 10px;
+    }
+
+    #capture-area {
+        flex-grow: 1;
+        display: flex; /* capture-areaをflexにして中のpitch-wrapperを伸ばす */
+        padding: 10px;
+    }
+    .pitch-wrapper {
+        width: 100%;
+        flex-grow: 1;
+    }
+    
+    #mobile-subs-area {
+        flex-shrink: 0;
+        width: 100%;
+        height: 100px;
+        background: #f1f3f5;
+        border-top: 1px solid #dee2e6;
+        padding: 8px;
+        overflow-x: auto;
+        white-space: nowrap;
+        box-sizing: border-box;
+        padding-bottom: calc(8px + var(--safe-area-inset-bottom));
+        -webkit-overflow-scrolling: touch;
+        display: flex;
+        gap: 15px;
+    }
+    .sub-category-mobile { display: flex; flex-direction: column; gap: 5px; }
+    .sub-category-mobile-label { font-size: 12px; font-weight: bold; color: #868e96; }
+    .sub-players-wrapper { display: flex; gap: 8px; }
+    .sub-player-chip { width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 16px; color: white; background: var(--secondary-color); box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+
+    /* FAB (フローティングボタン) 共通スタイル */
+    .mobile-fab {
+        position: fixed;
+        width: 56px; height: 56px;
+        border-radius: 50%;
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 24px;
+        z-index: 1200;
+        transition: transform 0.2s, background-color 0.2s;
+    }
+    #mobile-hamburger-btn { position: static; width: 40px; height: 40px; flex-shrink: 0; background-color: transparent; color: #333; box-shadow: none; }
+    
+    #mode-toggle-btn { /* 既存ボタンの位置を調整 */
+        position: fixed; 
+        right: 15px; bottom: calc(15px + var(--safe-area-inset-bottom));
+        width: 56px; height: 56px; z-index: 1200;
+    }
+    #mobile-player-list-btn.bottom-left {
+        left: 15px; bottom: calc(15px + var(--safe-area-inset-bottom));
+    }
+    .mobile-formation-fab {
+        position: fixed;
+        top: calc(70px + var(--safe-area-inset-top)); /* ヘッダーの高さに応じて調整 */
+        left: 50%; transform: translateX(-50%);
+        padding: 8px 16px;
+        border-radius: 20px;
+        background-color: rgba(0, 0, 0, 0.6);
+        color: white; font-size: 14px;
+        border: none;
+        z-index: 100;
+        opacity: 0.8;
+        cursor: pointer;
+    }
+
+    #mobile-player-list-panel {
+        position: fixed;
+        left: 0; top: 0;
+        width: 85%;
+        max-width: 320px;
+        height: 100vh;
+        background: #fff;
+        box-shadow: 4px 0 15px rgba(0,0,0,0.2);
+        z-index: 1500;
+        transform: translateX(-105%);
+        transition: transform 0.3s ease-in-out;
+        display: flex;
+        flex-direction: column;
+    }
+    #mobile-player-list-panel.is-open {
+        transform: translateX(0);
+    }
+    #mobile-player-list-panel .panel-header {
+        padding: 15px;
+        padding-top: calc(15px + var(--safe-area-inset-top));
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #eee;
+    }
+    #mobile-player-list-panel .panel-header h3 { margin: 0; font-size: 1.1em; }
+    #add-player-btn-mobile { width: auto; padding: 6px 12px; font-size: 14px; }
+    
+    #panel-player-list-grid {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 15px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        align-content: flex-start;
+    }
+    .list-player-item { display: flex; flex-direction: column; align-items: center; cursor: grab; user-select: none; }
+    .list-player-item.is-assigned { opacity: 0.4; cursor: not-allowed; }
+    .list-player-marker {
+        width: 80px; height: 80px;
+        border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        color: white; font-weight: bold;
+        position: relative; /* for number */
+    }
+    .list-player-marker .list-player-number { position: absolute; top: 8px; font-size: 12px; opacity: 0.9; }
+    .list-player-marker .list-player-name { font-size: 15px; text-align: center; padding: 0 5px; line-height: 1.2; word-break: break-all; }
+    .list-player-marker.gk { background-color: var(--marker-gk-color); color: #333; }
+    .list-player-marker.df { background-color: var(--marker-df-color); }
+    .list-player-marker.mf { background-color: var(--marker-mf-color); }
+    .list-player-marker.fw { background-color: var(--marker-fw-color); }
+    
+    /* ピッチのプレースホルダースタイル */
+    .player-container.is-empty .player-marker { background: rgba(0,0,0,0.1); border-style: dashed; }
+    .player-container.is-empty .player-number { display: none; }
+    .player-container.is-empty .player-pos { font-weight: bold; font-size: 14px; color: rgba(255,255,255,0.7); opacity: 1; }
+    .player-container.is-empty .player-name { display: none; }
+    .player-container.is-empty .unassign-btn { display: none; }
+
+    #mobile-unassign-bumper {
+        position: fixed;
+        top: 0;
+        left: 0; right: 0;
+        background: rgba(220, 53, 69, 0.8);
+        color: white;
+        text-align: center;
+        padding: 20px;
+        padding-top: calc(20px + var(--safe-area-inset-top));
+        z-index: 1600;
+        transform: translateY(-105%);
+        transition: transform 0.2s ease-in-out, background-color 0.2s;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px; font-size: 18px; font-weight: bold;
+    }
+    #mobile-unassign-bumper.is-visible {
+        transform: translateY(0);
+    }
+     #mobile-unassign-bumper.is-droppable {
+        background: rgba(180, 40, 55, 0.95); /* Drop hover effect */
+    }
+    .is-capturing .mobile-formation-fab { display: none; } /* 画像保存時に非表示 */
+
+} /* End of @media */
+
+/* --- END: スマートフォンUIスタイル --- */
     </style>
 </head>
 <body data-layout-mode="vertical" data-drag-mode="swap">
+        <header class="mobile-header">
+        <input type="text" id="mobile-title-input" placeholder="スタメン予想">
+        <button id="mobile-hamburger-btn" class="mobile-fab">≡</button>
+    </header>
+
+    <div id="mobile-subs-area">
+        <!-- ここに控え選手がJSで描画されます -->
+    </div>
+
+    <div id="mobile-player-list-panel">
+        <div class="panel-header">
+            <h3>選手リスト</h3>
+            <button id="add-player-btn-mobile" class="btn-primary">+</button>
+        </div>
+        <div id="panel-player-list-grid">
+            <!-- ここに選手マーカーがJSで描画されます -->
+        </div>
+    </div>
+    
+    <button id="mobile-formation-btn" class="mobile-formation-fab">4-2-3-1</button>
+    <button id="mobile-player-list-btn" class="mobile-fab bottom-left">👥</button>
+    <!-- 既存の #mode-toggle-btn はそのまま使い、CSSで位置を調整します -->
+
+    <div id="mobile-unassign-bumper">
+        <span>🗑️ リストに戻す</span>
+    </div>
+
+    <div id="mobile-hamburger-menu" class="modal-overlay">
+        <div class="modal-content">
+             <h3>メニュー</h3>
+             <div style="display: flex; flex-direction: column; gap: 15px;">
+                <button id="save-image-btn-mobile" class="btn-primary">画像を保存</button>
+                <button id="reset-all-btn-mobile" class="btn-danger">全配置をリセット</button>
+                <button id="share-data-btn-mobile" class="btn-secondary">リストを共有 / 読込</button>
+             </div>
+        </div>
+    </div>
+    <div class="pc-ui-wrapper">
         <div id="mobile-notice-banner">
         <div class="banner-content">
             <span class="icon">⚠️</span>
@@ -452,6 +725,7 @@
         </div>
         <div id="sidebar-player-list"></div>
     </div>
+</div>        
 
     <div class="modal-overlay" id="formation-modal">
         <div class="modal-content">
@@ -552,6 +826,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
 const App = {
     els: {},
+    isMobile: false, 
+    isDraggingPlayer: false,
     state: {
         squad: [],
         starters: {}, // { "posId": { playerId, coords }, ... }
@@ -571,20 +847,9 @@ const App = {
     sidebarHoverTimer: null,
 
     init() {
+        this.isMobile = window.innerWidth <= 768; 
         this.cacheElements();
-            const noticeBanner = document.getElementById('mobile-notice-banner');
-    const closeNoticeBtn = document.getElementById('close-notice-btn');
-    if (noticeBanner && closeNoticeBtn) {
-        // セッションストレージを使って、一度閉じたらそのセッションでは表示しないようにする
-        if (sessionStorage.getItem('mobileNoticeClosed') === 'true') {
-            noticeBanner.style.display = 'none';
-        }
-
-        closeNoticeBtn.addEventListener('click', () => {
-            noticeBanner.style.display = 'none';
-            sessionStorage.setItem('mobileNoticeClosed', 'true');
-        });
-    }
+        this.setupNoticeBanner(); 
         this.defineConstants();
         this.clonePanels();
         this.loadState();
@@ -592,6 +857,19 @@ const App = {
         this.buildFormationModal();
         this.bindEvents();
         this.renderAll();
+    },
+        setupNoticeBanner() {
+        const noticeBanner = document.getElementById('mobile-notice-banner');
+        const closeNoticeBtn = document.getElementById('close-notice-btn');
+        if (noticeBanner && closeNoticeBtn) {
+            if (sessionStorage.getItem('mobileNoticeClosed') === 'true') {
+                noticeBanner.style.display = 'none';
+            }
+            closeNoticeBtn.addEventListener('click', () => {
+                noticeBanner.style.display = 'none';
+                sessionStorage.setItem('mobileNoticeClosed', 'true');
+            });
+        }
     },
 
     cacheElements() {
@@ -630,6 +908,22 @@ const App = {
             modeToggleBtn: query('#mode-toggle-btn'), modeToast: query('#mode-toast'),
             sidebarHandle: query('.sidebar-handle'),
             pinSidebarBtn: query('.pin-sidebar-btn')
+        mobile: {
+            header: query('.mobile-header'),
+            titleInput: query('#mobile-title-input'),
+            hamburgerBtn: query('#mobile-hamburger-btn'),
+            hamburgerMenu: query('#mobile-hamburger-menu'),
+            saveImageBtn: query('#save-image-btn-mobile'),
+            resetAllBtn: query('#reset-all-btn-mobile'),
+            shareDataBtn: query('#share-data-btn-mobile'),
+            subsArea: query('#mobile-subs-area'),
+            playerListPanel: query('#mobile-player-list-panel'),
+            playerListGrid: query('#panel-player-list-grid'),
+            addPlayerBtn: query('#add-player-btn-mobile'),
+            formationBtn: query('#mobile-formation-btn'),
+            playerListBtn: query('#mobile-player-list-btn'),
+            unassignBumper: query('#mobile-unassign-bumper')
+        }
         };
         this.els.allModals = queryAll('.modal-overlay');
         this.els.allCloseBtns = queryAll('.modal-close-btn');
@@ -649,6 +943,50 @@ const App = {
     },
     
     bindEvents() {
+            if (this.isMobile) {
+        // Title sync
+        this.els.mobile.titleInput.addEventListener('input', (e) => this.els.titleInput.value = e.target.value);
+        this.els.titleInput.addEventListener('input', (e) => this.els.mobile.titleInput.value = e.target.value);
+
+        // Hamburger Menu
+        this.els.mobile.hamburgerBtn.addEventListener('click', () => this.openModal(this.els.mobile.hamburgerMenu));
+        this.els.mobile.hamburgerMenu.addEventListener('click', (e) => {
+            if (e.target === this.els.mobile.hamburgerMenu) this.closeAllModals();
+        });
+        this.els.mobile.saveImageBtn.addEventListener('click', this.saveImage.bind(this));
+        this.els.mobile.resetAllBtn.addEventListener('click', this.resetAllAssignments.bind(this));
+        this.els.mobile.shareDataBtn.addEventListener('click', () => { this.closeAllModals(); this.openModal(this.els.shareModal.overlay); });
+
+        // Player List Panel
+        this.els.mobile.playerListBtn.addEventListener('click', () => {
+            this.els.mobile.playerListPanel.classList.toggle('is-open');
+        });
+
+        // Formation Popover
+        this.els.mobile.formationBtn.addEventListener('click', () => {
+            this.buildFormationModal(); // Logic will be modified to use popover on mobile
+            this.openModal(this.els.formationModal.overlay); // Temporarily uses existing modal
+        });
+        
+        // Unassign Bumper drag events
+        this.els.mobile.unassignBumper.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            this.els.mobile.unassignBumper.classList.add('is-droppable');
+        });
+         this.els.mobile.unassignBumper.addEventListener('dragleave', () => {
+            this.els.mobile.unassignBumper.classList.remove('is-droppable');
+        });
+         this.els.mobile.unassignBumper.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const data = JSON.parse(e.dataTransfer.getData('application/json'));
+            if (data.playerId) {
+                this.unassignPlayer(data.playerId);
+                this.renderAll();
+            }
+            this.els.mobile.unassignBumper.classList.remove('is-droppable');
+        });
+        return; // PC用のイベントはバインドしない
+    }
         // --- サイドバー以外のイベントリスナー ---
         [...this.els.orientationRadios].forEach(radio => radio.addEventListener('change', e => { this.state.config.orientation = e.target.value; this.renderAll(); }));
         this.els.allShareBtns.forEach(btn => btn.addEventListener('click', () => this.openModal(this.els.shareModal.overlay)));
@@ -720,14 +1058,24 @@ const App = {
         }
     },
 
-    updateUI() {
-        this.els.titleInput.value = this.state.config.title;
+// 開始
+updateUI() {
+    this.els.titleInput.value = this.state.config.title;
+    this.els.body.dataset.dragMode = this.state.config.dragMode;
+    this.els.modeToggleBtn.innerHTML = this.svgIcons[this.state.config.dragMode];
+    
+    if (this.isMobile) {
+        // Mobile UI updates
+        this.els.mobile.titleInput.value = this.state.config.title;
+        this.els.mobile.formationBtn.textContent = this.formations[this.state.config.formation].name;
+    } else {
+        // PC specific UI updates
         document.querySelector(`input[name="orientation"][value="${this.state.config.orientation}"]`).checked = true;
         this.els.body.dataset.layoutMode = this.state.config.orientation;
-        this.els.body.dataset.dragMode = this.state.config.dragMode;
         this.els.panels.right.openFormationModalBtn.textContent = this.formations[this.state.config.formation].name;
-        this.els.modeToggleBtn.innerHTML = this.svgIcons[this.state.config.dragMode];
-    },
+    }
+},
+// 終了
 
     renderAll() {
         this.updateUI();
