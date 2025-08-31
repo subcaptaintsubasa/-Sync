@@ -828,6 +828,7 @@ const App = {
     els: {},
     isMobile: false, 
     isDraggingPlayer: false,
+    _lastDragStartType: null,
     state: {
         squad: [],
         starters: {}, // { "posId": { playerId, coords }, ... }
@@ -1383,6 +1384,7 @@ renderSubstitutes() {
 
     handleDragStart(e, data) {
         this.isDraggingPlayer = true;
+        this._lastDragStartType = data.type; 
         if (this.isMobile) {
             this.els.mobile.unassignBumper.classList.add('is-visible');
         // ドラッグ元がリストの場合、パネルを閉じる
@@ -1401,6 +1403,32 @@ renderSubstitutes() {
         if (this.els.sidebar.el.classList.contains('is-open')) {
             this.closeSidebar(true);
         }
+    },
+        handleDragEnd(e) {
+        if (!this.isDraggingPlayer) return;
+        this.isDraggingPlayer = false;
+
+        if (this.isMobile) {
+            this.els.mobile.unassignBumper.classList.remove('is-visible', 'is-droppable');
+            
+            try {
+                // ドロップ先にデータが渡っていれば、データ転送オブジェクトはクリアされている可能性がある
+                // そのためエラーを無視しつつも、リスト再表示を試みる
+                const dataText = e.dataTransfer.getData('application/json');
+                if (dataText) {
+                     const data = JSON.parse(dataText);
+                     if (data.type === 'list') {
+                        this.els.mobile.playerListPanel.classList.add('is-open');
+                     }
+                } else if(this._lastDragStartType === 'list'){ 
+                    // フォールバック: もしデータが取れなくても、開始タイプを記憶しておけば再表示できる
+                     this.els.mobile.playerListPanel.classList.add('is-open');
+                }
+            } catch(err) {
+                 console.log('Drag ended, could not reopen panel automatically.');
+            }
+        }
+        this._lastDragStartType = null; // リセット
     },
 
     handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drop-target-hover'); },
@@ -1432,23 +1460,29 @@ renderSubstitutes() {
         this.renderAll();
     },
 
-    handleDropOnSubZone(e) {
-        e.preventDefault(); e.stopPropagation();
-        const zone = e.currentTarget;
-        zone.classList.remove('drop-target-hover');
+// handleDropOnSubZoneメソッドを丸ごと置き換え
+handleDropOnSubZone(e, mobilePosCategory = null) {
+    e.preventDefault(); e.stopPropagation();
+    e.currentTarget.classList.remove('drop-target-hover');
+
+    try {
         const data = JSON.parse(e.dataTransfer.getData('application/json'));
         const player = this.state.squad.find(p => p.id === data.playerId);
 
         if (player) {
             this.unassignPlayer(data.playerId);
-            // 選手のポジションカテゴリに基づいて正しい配列に追加
-            if (!this.state.substitutes[player.posCategory]) {
-                this.state.substitutes[player.posCategory] = [];
+            const targetCategory = this.isMobile ? mobilePosCategory : player.posCategory;
+            
+            if (!this.state.substitutes[targetCategory]) {
+                this.state.substitutes[targetCategory] = [];
             }
-            this.state.substitutes[player.posCategory].push(data.playerId);
+            this.state.substitutes[targetCategory].push(data.playerId);
             this.renderAll();
         }
-    },
+    } catch (err) {
+        console.error("Drop failed:", err);
+    }
+},
 
     unassignPlayer(playerId) {
         for (const posId in this.state.starters) {
