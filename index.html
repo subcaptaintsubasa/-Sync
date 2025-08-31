@@ -359,16 +359,17 @@
 }
 /* --- START: スマートフォンUIスタイル --- */
 
-/* デフォルトではスマホ用UIを非表示に */
+/* デフォルト(PC)ではスマホ用UIを非表示に */
 .mobile-header,
 #mobile-subs-area,
 #mobile-player-list-panel,
 #mobile-formation-btn,
 #mobile-player-list-btn,
-#mobile-unassign-bumper,
-.pc-ui-wrapper {
+#mobile-unassign-bumper {
     display: none;
 }
+
+/* is-mobileクラスが付いたらPC用UIを非表示にし、スマホ用を表示する */
 body.is-mobile .pc-ui-wrapper {
     display: none;
 }
@@ -590,7 +591,6 @@ body.is-mobile #mode-toggle-btn { /* 既存のFABもモバイルで表示 */
     .is-capturing .mobile-formation-fab { display: none; } /* 画像保存時に非表示 */
 
 } /* End of @media */
-
 /* --- END: スマートフォンUIスタイル --- */
     </style>
 </head>
@@ -849,6 +849,9 @@ const App = {
 
     init() {
         this.isMobile = window.innerWidth <= 768; 
+        if (this.isMobile) {
+        this.els.body.classList.add('is-mobile');
+        }
         this.cacheElements();
         this.setupNoticeBanner(); 
         this.defineConstants();
