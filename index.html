@@ -421,7 +421,7 @@ body.is-mobile #mode-toggle-btn { /* 既存のFABもモバイルで表示 */
         outline: none;
     }
 
-    .main-content { /* スマホではメインコンテンツがFlexboxの子になる */
+    body.is-mobile .main-content { /* スマホではメインコンテンツがFlexboxの子になる */
         display: flex;
         flex-direction: column;
         flex-grow: 1;
@@ -430,12 +430,12 @@ body.is-mobile #mode-toggle-btn { /* 既存のFABもモバイルで表示 */
         padding: 10px;
     }
 
-    #capture-area {
+    body.is-mobile #capture-area {
         flex-grow: 1;
         display: flex; /* capture-areaをflexにして中のpitch-wrapperを伸ばす */
         padding: 10px;
     }
-    .pitch-wrapper {
+    body.is-mobile .pitch-wrapper {
         width: 100%;
         flex-grow: 1;
     }
