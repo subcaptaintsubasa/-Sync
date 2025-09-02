@@ -348,6 +348,18 @@
 
 /* メディアクエリでスマホの場合のみ表示 */
 @media (max-width: 768px) {
+body.is-mobile .container {
+    /* スマホ表示ではPC用コンテナを縦並びにする */
+    flex-direction: column;
+    padding: 0;
+    height: 100%;
+    gap: 0;
+}
+body.is-mobile .left-panel,
+body.is-mobile .right-panel {
+    /* スマホ表示ではPC用パネルを完全に非表示にする */
+    display: none;
+}
     #mobile-notice-banner {
         display: flex;
     }
@@ -718,7 +730,7 @@ body.is-mobile .main-content {
                 <button id="share-data-btn-mobile" class="btn-secondary">リストを共有 / 読込</button>
              </div>
         </div>
-    </div>v class="pc-ui-wrapper">
+    </div><div class="pc-ui-wrapper">
         <div id="mobile-notice-banner">
         <div class="banner-content">
             <span class="icon">⚠️</span>
@@ -1819,7 +1831,8 @@ saveImage() {
         }
 
         const captureTitle = cloneArea.querySelector('#capture-title');
-    const titleInput = this.isMobile ? this.els.mobile.titleInput : this.els.titleInput;        if (captureTitle) {
+    const titleInput = this.isMobile ? this.els.mobile.titleInput : this.els.titleInput;
+    if (captureTitle) {
             captureTitle.textContent = titleInput.value || titleInput.placeholder;
             captureTitle.style.display = 'block';
         }
