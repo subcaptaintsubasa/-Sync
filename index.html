@@ -667,6 +667,10 @@ body.is-mobile #mode-toggle-btn { /* 既存のFABもモバイルで表示 */
     </style>
 </head>
 <body data-layout-mode="vertical" data-drag-mode="swap">
+    <div id="update-notification" style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background-color: #333; color: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 9999; font-size: 14px; align-items: center; gap: 15px;">
+        <span>新しいバージョンが利用可能です。</span>
+        <button id="update-btn" style="width: auto; padding: 6px 12px; font-size: 13px; background-color: var(--primary-color); color: white; border: none; border-radius: 5px; cursor: pointer;">更新</button>
+    </div>
         <header class="mobile-header">
         <input type="text" id="mobile-title-input" placeholder="スタメン予想">
         <button id="mobile-hamburger-btn" class="mobile-fab">≡</button>
