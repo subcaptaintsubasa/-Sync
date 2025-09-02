@@ -379,6 +379,9 @@ body.is-mobile .mobile-ui {
     body {
         padding: 0; /* PC用の余白をリセット */
     }
+    body.is-mobile .main-content #title-input {
+    display: none;
+}
     .mobile-header {
         position: sticky;
         top: 0;
@@ -814,7 +817,7 @@ body.is-mobile .main-content {
         <div class="left-panel">
             <div id="player-management-section-left" class="control-group"></div>
         </div>
-
+</div> 
         <div class="main-content">
             <input type="text" id="title-input" placeholder="スタメン予想">
             <div id="capture-area">
@@ -826,7 +829,7 @@ body.is-mobile .main-content {
                 <div id="capture-watermark" class="capture-watermark"></div>
             </div>
         </div>
-</div> 
+        
         <div class="pc-ui">
 
         
