@@ -591,6 +591,78 @@ body.is-mobile #mode-toggle-btn { /* 既存のFABもモバイルで表示 */
     .is-capturing .mobile-formation-fab { display: none; } /* 画像保存時に非表示 */
 
 } /* End of @media */
+/* 修正箇所: スタイルシートの末尾に追加 */
+
+/* --- START: スマホUI改善スタイル --- */
+@media (max-width: 768px) {
+    #panel-player-list-grid {
+        grid-template-columns: repeat(2, 1fr); /* 2列グリッド */
+        gap: 20px;
+        padding: 15px;
+        align-content: flex-start;
+    }
+
+    .list-player-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+        user-select: none;
+        cursor: grab;
+    }
+    .list-player-item.is-assigned {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    .list-player-marker {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        font-weight: bold;
+        color: white;
+        text-align: center;
+        box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+        position: relative;
+    }
+    .list-player-marker .list-player-number {
+        position: absolute;
+        top: 10px;
+        font-size: 14px;
+        opacity: 0.9;
+    }
+    .list-player-marker .list-player-name {
+        font-size: 18px;
+        line-height: 1.2;
+        padding: 0 8px;
+        word-break: break-word;
+    }
+    
+    .list-player-marker.gk { background-color: var(--marker-gk-color); color: #333; }
+    .list-player-marker.df { background-color: var(--marker-df-color); }
+    .list-player-marker.mf { background-color: var(--marker-mf-color); }
+    .list-player-marker.fw { background-color: var(--marker-fw-color); }
+
+    /* ピッチのプレースホルダースタイル */
+    .player-container.is-empty .player-marker {
+        background: rgba(0,0,0,0.1);
+        border: 2px dashed rgba(255,255,255,0.5);
+    }
+    .player-container.is-empty .player-number { display: none; }
+    .player-container.is-empty .player-pos {
+        font-weight: bold;
+        font-size: 14px;
+        color: rgba(255,255,255,0.7);
+        opacity: 1;
+    }
+    .player-container.is-empty .player-name { display: none; }
+    .player-container.is-empty .unassign-btn { display: none; }
+}
+/* --- END: スマホUI改善スタイル --- */
 /* --- END: スマートフォンUIスタイル --- */
     </style>
 </head>
@@ -1112,59 +1184,63 @@ updateUI() {
         });
     },
 
-    createPlayerMarker(posSpec, defaultCoords, posId) {
-        const markerEl = document.createElement('div');
-        markerEl.className = 'player-container';
-        markerEl.dataset.posId = posId;
+// 修正箇所: createPlayerMarker メソッドを、以下の完全なコードで丸ごと置き換えてください。
 
-        const starter = this.state.starters[posId];
-        const currentCoords = starter?.coords ?? defaultCoords;
+createPlayerMarker(posSpec, defaultCoords, posId) {
+    const markerEl = document.createElement('div');
+    markerEl.className = 'player-container';
+    markerEl.dataset.posId = posId;
 
-        if (this.state.config.orientation === 'vertical') {
-            markerEl.style.top = `${100 - (currentCoords.left * 0.9)}%`;
-            markerEl.style.left = `${currentCoords.top}%`;
+    const starter = this.state.starters[posId];
+    const currentCoords = starter?.coords ?? defaultCoords;
+
+    if (this.state.config.orientation === 'vertical') {
+        markerEl.style.top = `${100 - (currentCoords.left * 0.9)}%`;
+        markerEl.style.left = `${currentCoords.top}%`;
+    } else {
+        markerEl.style.top = `${currentCoords.top}%`;
+        markerEl.style.left = `${currentCoords.left * 0.9}%`;
+    }
+
+    const player = starter ? this.state.squad.find(p => p.id === starter.playerId) : null;
+    const role = this.getRole(posSpec.pos);
+    
+    // playerの存在有無で is-empty クラスを制御
+    if (!player) {
+        markerEl.classList.add('is-empty');
+    }
+
+    markerEl.innerHTML = `
+        <div class="player-marker ${role}">
+            <span class="player-number">${player?.number ?? ''}</span>
+            <span class="player-pos">${posSpec.pos}</span>
+        </div>
+        <div class="player-name">${player?.name ?? posSpec.pos}</div>`;
+        
+    markerEl.addEventListener('dragover', this.handleDragOver.bind(this));
+    markerEl.addEventListener('dragleave', this.handleDragLeave.bind(this));
+    markerEl.addEventListener('drop', (e) => this.handleDropOnPitch(e, posId));
+
+    if (player) {
+        if (this.state.config.dragMode === 'position') {
+            this.makeMarkerMovable(markerEl);
+            markerEl.draggable = false;
         } else {
-            markerEl.style.top = `${currentCoords.top}%`;
-            markerEl.style.left = `${currentCoords.left * 0.9}%`;
+            markerEl.draggable = true;
+            markerEl.addEventListener('dragstart', (e) => this.handleDragStart(e, { type: 'pitch', posId: posId, playerId: player.id }));
         }
-
-        const player = starter ? this.state.squad.find(p => p.id === starter.playerId) : null;
-        const role = this.getRole(posSpec.pos);
-        if (!player) {
-    markerEl.classList.add('is-empty');
-}
-
-        markerEl.innerHTML = `
-            <div class="player-marker ${role}">
-                <span class="player-number">${player?.number ?? ''}</span>
-                <span class="player-pos">${posSpec.pos}</span>
-            </div>
-            <div class="player-name">${player?.name ?? posSpec.pos}</div>`;
-            
-        markerEl.addEventListener('dragover', this.handleDragOver.bind(this));
-        markerEl.addEventListener('dragleave', this.handleDragLeave.bind(this));
-        markerEl.addEventListener('drop', (e) => this.handleDropOnPitch(e, posId));
-
-        if (player) {
-            if (this.state.config.dragMode === 'position') {
-                this.makeMarkerMovable(markerEl);
-                markerEl.draggable = false;
-            } else {
-                markerEl.draggable = true;
-                markerEl.addEventListener('dragstart', (e) => this.handleDragStart(e, { type: 'pitch', posId: posId, playerId: player.id }));
-            }
-            const unassignBtn = document.createElement('button');
-            unassignBtn.innerHTML = '&times;';
-            unassignBtn.className = 'unassign-btn';
-            unassignBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.unassignPlayer(player.id);
-                this.renderAll();
-            });
-            markerEl.appendChild(unassignBtn);
-        }
-        this.els.pitch.appendChild(markerEl);
-    },
+        const unassignBtn = document.createElement('button');
+        unassignBtn.innerHTML = '&times;';
+        unassignBtn.className = 'unassign-btn';
+        unassignBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.unassignPlayer(player.id);
+            this.renderAll();
+        });
+        markerEl.appendChild(unassignBtn);
+    }
+    this.els.pitch.appendChild(markerEl);
+},
     
     getRole(pos) {
         if (pos === 'GK') return 'gk';
@@ -1208,6 +1284,8 @@ updateUI() {
     },
 
 // 開始
+// 修正箇所: renderPlayerList メソッドを丸ごと置き換え
+
 renderPlayerList() {
     const assignedPlayerIds = new Set([
         ...Object.values(this.state.starters).map(s => s.playerId),
@@ -1215,12 +1293,12 @@ renderPlayerList() {
     ]);
 
     if (this.isMobile) {
-        // ▼▼▼ スマホ用のレンダリング処理 ▼▼▼
+        // ▼▼▼ スマートフォン用のレンダリング処理 ▼▼▼
         const gridContainer = this.els.mobile.playerListGrid;
         gridContainer.innerHTML = '';
 
         if (this.state.squad.length === 0) {
-            gridContainer.innerHTML = '<p style="color:#888; grid-column: 1 / -1;">選手がいません。PC表示から選手を追加してください。</p>';
+            gridContainer.innerHTML = '<p style="color:#888; grid-column: 1 / -1; text-align: center;">選手がいません。<br>「+」ボタンから追加してください。</p>';
             return;
         }
 
@@ -1241,11 +1319,11 @@ renderPlayerList() {
                     <span class="list-player-name">${player.name}</span>
                 </div>`;
             
-            // Long-press for edit on mobile
+            // 長押しで編集モーダルを開く
             let longPressTimer;
             const cancelLongPress = () => clearTimeout(longPressTimer);
             itemEl.addEventListener('touchstart', (e) => {
-                 if(isAssigned) return;
+                 if (isAssigned) return;
                  longPressTimer = setTimeout(() => { 
                      navigator.vibrate?.(50); 
                      this.openEditModal(player.id); 
@@ -1256,11 +1334,12 @@ renderPlayerList() {
 
             gridContainer.appendChild(itemEl);
         });
-        return; // スマホの場合はここで処理終了
+        return; 
     }
 
-    // ▼▼▼ 以下は既存のPC用レンダリング処理 ▼▼▼
+    // ▼▼▼ PC用のレンダリング処理 (変更なし) ▼▼▼
     const listContainer = this.els.sidebar.list;
+    // (以下、既存のPC用コード)
     listContainer.innerHTML = '';
     if (this.state.squad.length === 0) {
         listContainer.className = 'is-empty';
@@ -1378,54 +1457,52 @@ renderSubstitutes() {
 },
 // 終了
 
-    handleDragStart(e, data) {
-        this.isDraggingPlayer = true;
-        this._lastDragStartType = data.type; 
-        if (this.isMobile) {
-            this.els.mobile.unassignBumper.classList.add('is-visible');
-        // ドラッグ元がリストの場合、パネルを閉じる
+// 修正箇所: handleDragStart メソッドを丸ごと置き換え
+
+handleDragStart(e, data) {
+    this.isDraggingPlayer = true;
+    this._lastDragStartType = data.type; // どのエリアからドラッグが始まったか記録
+    
+    if (this.isMobile) {
+        this.els.mobile.unassignBumper.classList.add('is-visible');
+        // ドラッグ元がリストの場合、パネルを自動で閉じる
         if (data.type === 'list') {
             this.els.mobile.playerListPanel.classList.remove('is-open');
         }
     }
-        e.dataTransfer.setData('application/json', JSON.stringify(data));
-        e.dataTransfer.effectAllowed = 'move';
-        const player = this.state.squad.find(p => p.id === data.playerId);
-        if (player) {
-            this.els.dragGhost.innerHTML = `<span class="num">${player.number}</span><span class="name">${player.name}</span>`;
-            e.dataTransfer.setDragImage(this.els.dragGhost, 15, 15);
-        }
-        e.stopPropagation();
-        if (this.els.sidebar.el.classList.contains('is-open')) {
-            this.closeSidebar(true);
-        }
-    },
-        handleDragEnd(e) {
-        if (!this.isDraggingPlayer) return;
-        this.isDraggingPlayer = false;
+    
+    e.dataTransfer.setData('application/json', JSON.stringify(data));
+    e.dataTransfer.effectAllowed = 'move';
+    const player = this.state.squad.find(p => p.id === data.playerId);
+    if (player) {
+        this.els.dragGhost.innerHTML = `<span class="num">${player.number}</span><span class="name">${player.name}</span>`;
+        e.dataTransfer.setDragImage(this.els.dragGhost, 15, 15);
+    }
+    e.stopPropagation();
+    
+    if (this.els.sidebar.el.classList.contains('is-open')) {
+        this.closeSidebar(true);
+    }
+},
+// 修正箇所: handleDragEnd メソッドを丸ごと置き換え
 
-        if (this.isMobile) {
-            this.els.mobile.unassignBumper.classList.remove('is-visible', 'is-droppable');
-            
-            try {
-                // ドロップ先にデータが渡っていれば、データ転送オブジェクトはクリアされている可能性がある
-                // そのためエラーを無視しつつも、リスト再表示を試みる
-                const dataText = e.dataTransfer.getData('application/json');
-                if (dataText) {
-                     const data = JSON.parse(dataText);
-                     if (data.type === 'list') {
-                        this.els.mobile.playerListPanel.classList.add('is-open');
-                     }
-                } else if(this._lastDragStartType === 'list'){ 
-                    // フォールバック: もしデータが取れなくても、開始タイプを記憶しておけば再表示できる
-                     this.els.mobile.playerListPanel.classList.add('is-open');
-                }
-            } catch(err) {
-                 console.log('Drag ended, could not reopen panel automatically.');
-            }
+handleDragEnd(e) {
+    if (!this.isDraggingPlayer) return;
+    this.isDraggingPlayer = false;
+
+    if (this.isMobile) {
+        this.els.mobile.unassignBumper.classList.remove('is-visible', 'is-droppable');
+        
+        // ドラッグ開始元がリストだった場合、ドロップ後にパネルを再表示
+        if (this._lastDragStartType === 'list') {
+            // 少し遅延させることで、ドロップ処理が完了してからパネルを開く
+            setTimeout(() => {
+                this.els.mobile.playerListPanel.classList.add('is-open');
+            }, 100); 
         }
-        this._lastDragStartType = null; // リセット
-    },
+    }
+    this._lastDragStartType = null; // 記録をリセット
+},
 
     handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drop-target-hover'); },
     handleDragLeave(e) { e.currentTarget.classList.remove('drop-target-hover'); },
@@ -1694,8 +1771,8 @@ savePlayerChanges() {
         this.toastTimer = setTimeout(() => { this.els.modeToast.classList.remove('show'); }, 1500);
     },
     
-    saveImage() {
-        const allSubs = Object.values(this.state.substitutes).flat();
+saveImage() {
+    const allSubs = Object.values(this.state.substitutes).flat();
     if (allSubs.length > 9) {
         const proceed = confirm(
             `警告：控え選手の人数が9人を超えています（現在 ${allSubs.length}人）。\n公式ルールでは認められていませんが、このまま画像を保存しますか？`
