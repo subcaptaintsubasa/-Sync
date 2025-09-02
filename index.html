@@ -919,10 +919,10 @@ const App = {
 
     init() {
         this.isMobile = window.innerWidth <= 768; 
-        if (this.isMobile) {
-        this.els.body.classList.add('is-mobile');
-        }
         this.cacheElements();
+        if (this.isMobile) {
+            this.els.body.classList.add('is-mobile');
+        }
         this.setupNoticeBanner(); 
         this.defineConstants();
         this.clonePanels();
