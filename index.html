@@ -382,7 +382,9 @@ body.is-mobile .right-panel {
 }
 
 /* is-mobileクラスが付いたらPC用UIを非表示にし、スマホ用を表示する */
-
+body.is-mobile .pc-ui-wrapper {
+    display: none;
+}
 body.is-mobile .mobile-header,
 body.is-mobile #mobile-subs-area,
 body.is-mobile #mobile-player-list-btn {
@@ -726,7 +728,7 @@ body.is-mobile .main-content {
                 <button id="share-data-btn-mobile" class="btn-secondary">リストを共有 / 読込</button>
              </div>
         </div>
-    <div class="pc-ui-wrapper">
+    </div><div class="pc-ui-wrapper">
         <div id="mobile-notice-banner">
         <div class="banner-content">
             <span class="icon">⚠️</span>
