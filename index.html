@@ -358,6 +358,87 @@
     }
 }
 /* --- START: スマートフォンUIスタイル --- */
+/* --- START: スマートフォンUIスタイル --- */
+
+/* PCではスマホUIを非表示 */
+.mobile-ui {
+    display: none;
+}
+
+/* is-mobileクラスが付いたらPC用UIを非表示にし、スマホ用を表示する */
+body.is-mobile .pc-ui {
+    display: none;
+}
+body.is-mobile .mobile-ui {
+    display: flex; /* header, main-content, subs-areaを縦に並べるため */
+    flex-direction: column;
+    height: 100vh; /* 画面全体の高さを使う */
+}
+
+@media (max-width: 768px) {
+    body {
+        padding: 0; /* PC用の余白をリセット */
+    }
+    .mobile-header {
+        position: sticky;
+        top: 0;
+        width: 100%;
+        padding: 10px 15px;
+        padding-top: calc(10px + env(safe-area-inset-top));
+        background: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        z-index: 1100;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-shrink: 0;
+    }
+    #mobile-title-input {
+        flex-grow: 1;
+        border: none;
+        background: transparent;
+        font-size: 18px;
+        font-weight: bold;
+        outline: none;
+    }
+
+    .mobile-ui .main-content {
+        flex-grow: 1;
+        min-height: 0;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .mobile-ui #capture-area {
+        flex-grow: 1;
+        display: flex;
+        padding: 10px;
+    }
+    .mobile-ui .pitch-wrapper {
+        flex-grow: 1;
+    }
+    
+    #mobile-subs-area {
+        flex-shrink: 0;
+        width: 100%;
+        height: 100px;
+        background: #f1f3f5;
+        border-top: 1px solid #dee2e6;
+        padding: 8px;
+        overflow-x: auto;
+        white-space: nowrap;
+        box-sizing: border-box;
+        padding-bottom: calc(8px + env(safe-area-inset-bottom));
+        -webkit-overflow-scrolling: touch;
+        display: flex;
+        gap: 15px;
+    }
+    .sub-category-mobile { display: flex; flex-direction: column; gap: 5px; }
+    .sub-category-mobile-label { font-size: 12px; font-weight: bold; color: #868e96; }
+    .sub-players-wrapper { display: flex; gap: 8px; }
+    .sub-player-chip { width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 16px; color: white; background: var(--secondary-color); box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
 
 /* デフォルト(PC)ではスマホ用UIを非表示に */
 .mobile-header,
@@ -682,6 +763,8 @@ body.is-mobile .main-content {
     </style>
 </head>
 <body data-layout-mode="vertical" data-drag-mode="swap">
+    <div class="mobile-ui">
+
     <div id="update-notification" style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background-color: #333; color: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 9999; font-size: 14px; align-items: center; gap: 15px;">
         <span>新しいバージョンが利用可能です。</span>
         <button id="update-btn" style="width: auto; padding: 6px 12px; font-size: 13px; background-color: var(--primary-color); color: white; border: none; border-radius: 5px; cursor: pointer;">更新</button>
@@ -743,7 +826,10 @@ body.is-mobile .main-content {
                 <div id="capture-watermark" class="capture-watermark"></div>
             </div>
         </div>
+</div> 
+        <div class="pc-ui">
 
+        
     <div id="mobile-subs-area">
         <!-- ここに控え選手がJSで描画されます -->
     </div>
@@ -902,6 +988,7 @@ body.is-mobile .main-content {
     <button id="mode-toggle-btn" class="mode-toggle-fab" title="マーカー操作モード切替"></button>
     <div id="mode-toast" class="mode-toast"></div>
 </div>
+</div> 
 
 <script>
 
@@ -1330,18 +1417,6 @@ renderPlayerList() {
                     <span class="list-player-name">${player.name}</span>
                 </div>`;
             
-            // 長押しで編集モーダルを開く
-            let longPressTimer;
-            const cancelLongPress = () => clearTimeout(longPressTimer);
-            itemEl.addEventListener('touchstart', (e) => {
-                 if (isAssigned) return;
-                 longPressTimer = setTimeout(() => { 
-                     navigator.vibrate?.(50); 
-                     this.openEditModal(player.id); 
-                 }, 600);
-            }, { passive: true });
-            itemEl.addEventListener('touchend', cancelLongPress);
-            itemEl.addEventListener('touchmove', cancelLongPress);
 
             gridContainer.appendChild(itemEl);
         });
