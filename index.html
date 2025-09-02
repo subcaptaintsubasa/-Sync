@@ -721,18 +721,6 @@ body.is-mobile #mode-toggle-btn { /* 既存のFABもモバイルで表示 */
         <div class="left-panel">
             <div id="player-management-section-left" class="control-group"></div>
         </div>
-        
-        <div class="main-content">
-            <input type="text" id="title-input" placeholder="スタメン予想">
-            <div id="capture-area">
-                <div class="pitch-wrapper vertical" id="pitch-wrapper">
-                    <div class="capture-title" id="capture-title"></div>
-                    <div class="pitch" id="pitch"></div>
-                </div>
-                <div class="capture-subs" id="capture-subs"></div>
-                <div id="capture-watermark" class="capture-watermark"></div>
-            </div>
-        </div>
 
         <aside class="right-panel">
              <div class="app-branding">
@@ -888,6 +876,18 @@ body.is-mobile #mode-toggle-btn { /* 既存のFABもモバイルで表示 */
     <button id="mode-toggle-btn" class="mode-toggle-fab" title="マーカー操作モード切替"></button>
     <div id="mode-toast" class="mode-toast"></div>
 </div>
+
+        <div class="main-content">
+            <input type="text" id="title-input" placeholder="スタメン予想">
+            <div id="capture-area">
+                <div class="pitch-wrapper vertical" id="pitch-wrapper">
+                    <div class="capture-title" id="capture-title"></div>
+                    <div class="pitch" id="pitch"></div>
+                </div>
+                <div class="capture-subs" id="capture-subs"></div>
+                <div id="capture-watermark" class="capture-watermark"></div>
+            </div>
+        </div>
 
 <script>
 
@@ -1069,7 +1069,6 @@ const App = {
             }
             this.els.mobile.unassignBumper.classList.remove('is-droppable');
         });
-        return; // PC用のイベントはバインドしない
     }
         // --- サイドバー以外のイベントリスナー ---
         [...this.els.orientationRadios].forEach(radio => radio.addEventListener('change', e => { this.state.config.orientation = e.target.value; this.renderAll(); }));
@@ -1706,8 +1705,6 @@ handleDropOnSubZone(e, mobilePosCategory = null) {
         this.els.editModal.posSelect.value = player.posCategory || 'FW'; // 追加
         this.openModal(this.els.editModal.overlay);
     },
-
-// 修正箇所: savePlayerChanges メソッドを丸ごと置き換え
 
 savePlayerChanges() {
     const newNumber = parseInt(this.els.editModal.numberInput.value, 10);
