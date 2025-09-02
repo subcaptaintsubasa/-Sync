@@ -890,12 +890,6 @@ body.is-mobile #mode-toggle-btn { /* 既存のFABもモバイルで表示 */
 </div>
 
 <script>
-// --- PWA Service Worker Registration ---
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js')
-        .then(reg => console.log('Service Worker registered successfully:', reg.scope))
-        .catch(err => console.log('Service Worker registration failed:', err));
-}
 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -2068,6 +2062,44 @@ setupMouseSidebar() {
     }
 };
 
+// --- PWA Service Worker Registration & Update Handling ---
+if ('serviceWorker' in navigator) {
+    let newWorker;
+
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+        reg.addEventListener('updatefound', () => {
+            // 新しいService Workerがインストール中
+            newWorker = reg.installing;
+            newWorker.addEventListener('statechange', () => {
+                // インストールが完了し、待機状態になった
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // 更新通知UIを表示
+                    const notification = document.getElementById('update-notification');
+                    if (notification) notification.style.display = 'flex';
+                }
+            });
+        });
+    });
+
+    // 更新ボタンのクリックイベント
+    const updateBtn = document.getElementById('update-btn');
+    if (updateBtn) {
+        updateBtn.addEventListener('click', () => {
+            if (newWorker) {
+                newWorker.postMessage({ action: 'skipWaiting' }); // Service Workerに更新を指示
+            }
+        });
+    }
+
+    // Service Workerが更新され、コントローラーが変更されたらページをリロード
+    let refreshing;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        window.location.reload();
+        refreshing = true;
+    });
+}
+    
 App.init(); // Run the app
 
 });
