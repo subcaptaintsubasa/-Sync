@@ -396,9 +396,7 @@ body.is-mobile #mode-toggle-btn { /* 既存のFABもモバイルで表示 */
 }
 
 @media (max-width: 768px) {
-body.is-mobile .pc-ui-wrapper {
-    display: none;
-}
+
 body.is-mobile .main-content {
     display: flex; /* capture-areaをflexで伸ばすために必要 */
     flex-direction: column;
@@ -1341,19 +1339,6 @@ renderPlayerList() {
                     <span class="list-player-number">${player.number}</span>
                     <span class="list-player-name">${player.name}</span>
                 </div>`;
-            
-            // 長押しで編集モーダルを開く
-            let longPressTimer;
-            const cancelLongPress = () => clearTimeout(longPressTimer);
-            itemEl.addEventListener('touchstart', (e) => {
-                 if (isAssigned) return;
-                 longPressTimer = setTimeout(() => { 
-                     navigator.vibrate?.(50); 
-                     this.openEditModal(player.id); 
-                 }, 600);
-            }, { passive: true });
-            itemEl.addEventListener('touchend', cancelLongPress);
-            itemEl.addEventListener('touchmove', cancelLongPress);
 
             gridContainer.appendChild(itemEl);
         });
