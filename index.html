@@ -348,18 +348,6 @@
 
 /* メディアクエリでスマホの場合のみ表示 */
 @media (max-width: 768px) {
-body.is-mobile .container {
-    /* スマホ表示ではPC用コンテナを縦並びにする */
-    flex-direction: column;
-    padding: 0;
-    height: 100%;
-    gap: 0;
-}
-body.is-mobile .left-panel,
-body.is-mobile .right-panel {
-    /* スマホ表示ではPC用パネルを完全に非表示にする */
-    display: none;
-}
     #mobile-notice-banner {
         display: flex;
     }
@@ -396,7 +384,9 @@ body.is-mobile #mode-toggle-btn { /* 既存のFABもモバイルで表示 */
 }
 
 @media (max-width: 768px) {
-
+body.is-mobile .pc-ui-wrapper {
+    display: none;
+}
 body.is-mobile .main-content {
     display: flex; /* capture-areaをflexで伸ばすために必要 */
     flex-direction: column;
@@ -728,7 +718,7 @@ body.is-mobile .main-content {
                 <button id="share-data-btn-mobile" class="btn-secondary">リストを共有 / 読込</button>
              </div>
         </div>
-    </div><div class="pc-ui-wrapper">
+    </div>v class="pc-ui-wrapper">
         <div id="mobile-notice-banner">
         <div class="banner-content">
             <span class="icon">⚠️</span>
@@ -1339,6 +1329,19 @@ renderPlayerList() {
                     <span class="list-player-number">${player.number}</span>
                     <span class="list-player-name">${player.name}</span>
                 </div>`;
+            
+            // 長押しで編集モーダルを開く
+            let longPressTimer;
+            const cancelLongPress = () => clearTimeout(longPressTimer);
+            itemEl.addEventListener('touchstart', (e) => {
+                 if (isAssigned) return;
+                 longPressTimer = setTimeout(() => { 
+                     navigator.vibrate?.(50); 
+                     this.openEditModal(player.id); 
+                 }, 600);
+            }, { passive: true });
+            itemEl.addEventListener('touchend', cancelLongPress);
+            itemEl.addEventListener('touchmove', cancelLongPress);
 
             gridContainer.appendChild(itemEl);
         });
@@ -1816,8 +1819,7 @@ saveImage() {
         }
 
         const captureTitle = cloneArea.querySelector('#capture-title');
-    const titleInput = this.isMobile ? this.els.mobile.titleInput : this.els.titleInput;
-    if (captureTitle) {
+    const titleInput = this.isMobile ? this.els.mobile.titleInput : this.els.titleInput;        if (captureTitle) {
             captureTitle.textContent = titleInput.value || titleInput.placeholder;
             captureTitle.style.display = 'block';
         }
