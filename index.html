@@ -907,7 +907,6 @@ body.is-mobile .main-content {
     <button id="mode-toggle-btn" class="mode-toggle-fab" title="マーカー操作モード切替"></button>
     <div id="mode-toast" class="mode-toast"></div>
 </div>
-
 <script>
 
 
@@ -1056,6 +1055,14 @@ const App = {
         this.els.mobile.playerListBtn.addEventListener('click', () => {
             this.els.mobile.playerListPanel.classList.toggle('is-open');
         });
+        // パネルの外側をクリックしたら閉じるイベント
+		document.addEventListener('click', (e) => {
+			const panel = this.els.mobile.playerListPanel;
+			// パネルが開いていて、かつクリックした場所がパネルの外かつボタンの外である場合
+			if (panel.classList.contains('is-open') && !panel.contains(e.target) && !this.els.mobile.playerListBtn.contains(e.target)) {
+				panel.classList.remove('is-open');
+			}
+		});
         this.els.mobile.addPlayerBtn.addEventListener('click', () => {
             this.editingPlayerId = null; // 新規追加モードに設定
             this.els.editModal.numberInput.value = '';
@@ -1160,24 +1167,22 @@ const App = {
         }
     },
 
-// 開始
-updateUI() {
-    this.els.titleInput.value = this.state.config.title;
-    this.els.body.dataset.dragMode = this.state.config.dragMode;
-    this.els.modeToggleBtn.innerHTML = this.svgIcons[this.state.config.dragMode];
-    
-    if (this.isMobile) {
-        // Mobile UI updates
-        this.els.mobile.titleInput.value = this.state.config.title;
-        this.els.mobile.formationBtn.textContent = this.formations[this.state.config.formation].name;
-    } else {
-        // PC specific UI updates
-        document.querySelector(`input[name="orientation"][value="${this.state.config.orientation}"]`).checked = true;
-        this.els.body.dataset.layoutMode = this.state.config.orientation;
-        this.els.panels.right.openFormationModalBtn.textContent = this.formations[this.state.config.formation].name;
-    }
-},
-// 終了
+    updateUI() {
+        this.els.titleInput.value = this.state.config.title;
+        this.els.body.dataset.dragMode = this.state.config.dragMode;
+        this.els.modeToggleBtn.innerHTML = this.svgIcons[this.state.config.dragMode];
+        
+        if (this.isMobile) {
+            // Mobile UI updates
+            this.els.mobile.titleInput.value = this.state.config.title;
+            this.els.mobile.formationBtn.textContent = this.formations[this.state.config.formation].name;
+        } else {
+            // PC specific UI updates
+            document.querySelector(`input[name="orientation"][value="${this.state.config.orientation}"]`).checked = true;
+            this.els.body.dataset.layoutMode = this.state.config.orientation;
+            this.els.panels.right.openFormationModalBtn.textContent = this.formations[this.state.config.formation].name;
+        }
+    },
 
     renderAll() {
         this.updateUI();
@@ -1200,63 +1205,65 @@ updateUI() {
         });
     },
 
-// 修正箇所: createPlayerMarker メソッドを、以下の完全なコードで丸ごと置き換えてください。
+    createPlayerMarker(posSpec, defaultCoords, posId) {
+        const markerEl = document.createElement('div');
+        markerEl.className = 'player-container';
+        markerEl.dataset.posId = posId;
 
-createPlayerMarker(posSpec, defaultCoords, posId) {
-    const markerEl = document.createElement('div');
-    markerEl.className = 'player-container';
-    markerEl.dataset.posId = posId;
+        const starter = this.state.starters[posId];
+        const currentCoords = starter?.coords ?? defaultCoords;
 
-    const starter = this.state.starters[posId];
-    const currentCoords = starter?.coords ?? defaultCoords;
-
-    if (this.state.config.orientation === 'vertical') {
-        markerEl.style.top = `${100 - (currentCoords.left * 0.9)}%`;
-        markerEl.style.left = `${currentCoords.top}%`;
-    } else {
-        markerEl.style.top = `${currentCoords.top}%`;
-        markerEl.style.left = `${currentCoords.left * 0.9}%`;
-    }
-
-    const player = starter ? this.state.squad.find(p => p.id === starter.playerId) : null;
-    const role = this.getRole(posSpec.pos);
-    
-    // playerの存在有無で is-empty クラスを制御
-    if (!player) {
-        markerEl.classList.add('is-empty');
-    }
-
-    markerEl.innerHTML = `
-        <div class="player-marker ${role}">
-            <span class="player-number">${player?.number ?? ''}</span>
-            <span class="player-pos">${posSpec.pos}</span>
-        </div>
-        <div class="player-name">${player?.name ?? posSpec.pos}</div>`;
-        
-    markerEl.addEventListener('dragover', this.handleDragOver.bind(this));
-    markerEl.addEventListener('dragleave', this.handleDragLeave.bind(this));
-    markerEl.addEventListener('drop', (e) => this.handleDropOnPitch(e, posId));
-
-    if (player) {
-        if (this.state.config.dragMode === 'position') {
-            this.makeMarkerMovable(markerEl);
-            markerEl.draggable = false;
+        if (this.state.config.orientation === 'vertical') {
+            markerEl.style.top = `${100 - (currentCoords.left * 0.9)}%`;
+            markerEl.style.left = `${currentCoords.top}%`;
         } else {
-            markerEl.draggable = true;
-            markerEl.addEventListener('dragstart', (e) => this.handleDragStart(e, { type: 'pitch', posId: posId, playerId: player.id }));
+            markerEl.style.top = `${currentCoords.top}%`;
+            markerEl.style.left = `${currentCoords.left * 0.9}%`;
         }
-        const unassignBtn = document.createElement('button');
-        unassignBtn.innerHTML = '&times;';
-        unassignBtn.className = 'unassign-btn';
-        unassignBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.unassignPlayer(player.id);
-            this.renderAll();
-        });
-        markerEl.appendChild(unassignBtn);
-    }
-    this.els.pitch.appendChild(markerEl);
-},
+
+        const player = starter ? this.state.squad.find(p => p.id === starter.playerId) : null;
+        const role = this.getRole(posSpec.pos);
+        
+        if (!player) {
+            markerEl.classList.add('is-empty');
+        }
+
+        markerEl.innerHTML = `
+            <div class="player-marker ${role}">
+                <span class="player-number">${player?.number ?? ''}</span>
+                <span class="player-pos">${posSpec.pos}</span>
+            </div>
+            <div class="player-name">${player?.name ?? posSpec.pos}</div>`;
+            
+        markerEl.addEventListener('dragover', this.handleDragOver.bind(this));
+        markerEl.addEventListener('dragleave', this.handleDragLeave.bind(this));
+        markerEl.addEventListener('drop', (e) => this.handleDropOnPitch(e, posId));
+
+        if (player) {
+            const startDragHandler = (e) => this.handleDragStart(e, { type: 'pitch', posId: posId, playerId: player.id });
+
+            if (this.state.config.dragMode === 'position') {
+                this.makeMarkerMovable(markerEl);
+                markerEl.draggable = false;
+            } else {
+                markerEl.draggable = true;
+                markerEl.addEventListener('dragstart', startDragHandler);
+                if (this.isMobile) {
+                    markerEl.addEventListener('touchstart', startDragHandler, { passive: true });
+                }
+            }
+            const unassignBtn = document.createElement('button');
+            unassignBtn.innerHTML = '&times;';
+            unassignBtn.className = 'unassign-btn';
+            unassignBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.unassignPlayer(player.id);
+                this.renderAll();
+            });
+            markerEl.appendChild(unassignBtn);
+        }
+        this.els.pitch.appendChild(markerEl);
+    },
     
     getRole(pos) {
         if (pos === 'GK') return 'gk';
@@ -1266,252 +1273,319 @@ createPlayerMarker(posSpec, defaultCoords, posId) {
     },
 
     makeMarkerMovable(marker) {
-        const handleMouseDown = (e) => {
-            if (e.target.tagName !== 'DIV' || !e.target.classList.contains('player-marker')) return;
-            marker.classList.add('is-moving');
+		const handleDown = (e) => {
+			if (e.target.tagName !== 'DIV' || !e.target.classList.contains('player-marker')) return;
+			marker.classList.add('is-moving');
+			
+			const clientX = e.clientX ?? e.touches[0].clientX;
+			const clientY = e.clientY ?? e.touches[0].clientY;
 
-            const handleMouseMove = (moveEvent) => {
-                const pitchRect = this.els.pitch.getBoundingClientRect();
-                const newLeft = Math.max(0, Math.min(100, (moveEvent.clientX - pitchRect.left) / pitchRect.width * 100));
-                const newTop = Math.max(0, Math.min(100, (moveEvent.clientY - pitchRect.top) / pitchRect.height * 100));
-                marker.style.left = `${newLeft}%`;
-                marker.style.top = `${newTop}%`;
-            };
-            const handleMouseUp = () => {
-                marker.classList.remove('is-moving');
-                document.removeEventListener('mousemove', handleMouseMove);
+			const handleMove = (moveEvent) => {
+				const moveClientX = moveEvent.clientX ?? moveEvent.touches[0].clientX;
+				const moveClientY = moveEvent.clientY ?? moveEvent.touches[0].clientY;
+
+				const pitchRect = this.els.pitch.getBoundingClientRect();
+				const newLeft = Math.max(0, Math.min(100, (moveClientX - pitchRect.left) / pitchRect.width * 100));
+				const newTop = Math.max(0, Math.min(100, (moveClientY - pitchRect.top) / pitchRect.height * 100));
+				marker.style.left = `${newLeft}%`;
+				marker.style.top = `${newTop}%`;
+			};
+			const handleUp = () => {
+				marker.classList.remove('is-moving');
+				document.removeEventListener('mousemove', handleMove);
+				document.removeEventListener('touchmove', handleMove);
+				
+				const posId = marker.dataset.posId;
+				const newLeftPercent = parseFloat(marker.style.left);
+				const newTopPercent = parseFloat(marker.style.top);
+				
+				if (this.state.config.orientation === 'vertical') {
+					this.state.starters[posId].coords = { top: newLeftPercent, left: (100 - newTopPercent) / 0.9 };
+				} else {
+					this.state.starters[posId].coords = { top: newTopPercent, left: newLeftPercent / 0.9 };
+				}
+				this.saveState();
+			};
+			
+			document.addEventListener('mousemove', handleMove);
+			document.addEventListener('touchmove', handleMove, { passive: false });
+			document.addEventListener('mouseup', handleUp, { once: true });
+			document.addEventListener('touchend', handleUp, { once: true });
+		};
+		marker.querySelector('.player-marker').addEventListener('mousedown', handleDown);
+	},
+
+    renderPlayerList() {
+        const assignedPlayerIds = new Set([
+            ...Object.values(this.state.starters).map(s => s.playerId),
+            ...Object.values(this.state.substitutes).flat()
+        ]);
+
+        if (this.isMobile) {
+            // ▼▼▼ スマートフォン用のレンダリング処理 ▼▼▼
+            const gridContainer = this.els.mobile.playerListGrid;
+            gridContainer.innerHTML = '';
+
+            if (this.state.squad.length === 0) {
+                gridContainer.innerHTML = '<p style="color:#888; grid-column: 1 / -1; text-align: center;">選手がいません。<br>「+」ボタンから追加してください。</p>';
+                return;
+            }
+
+            this.state.squad.sort((a, b) => a.number - b.number).forEach(player => {
+                const isAssigned = assignedPlayerIds.has(player.id);
+                const itemEl = document.createElement('div');
+                itemEl.className = `list-player-item ${isAssigned ? 'is-assigned' : ''}`;
                 
-                const posId = marker.dataset.posId;
-                const newLeftPercent = parseFloat(marker.style.left);
-                const newTopPercent = parseFloat(marker.style.top);
-                
-                if (this.state.config.orientation === 'vertical') {
-                    this.state.starters[posId].coords = { top: newLeftPercent, left: (100 - newTopPercent) / 0.9 };
-                } else {
-                    this.state.starters[posId].coords = { top: newTopPercent, left: newLeftPercent / 0.9 };
+                if (!isAssigned) {
+                    itemEl.draggable = true;
+
+                    let touchStartX, touchStartY;
+                    let hasMoved = false;
+
+                    const handleTouchStart = (e) => {
+                        hasMoved = false;
+                        const touch = e.touches[0];
+                        touchStartX = touch.clientX;
+                        touchStartY = touch.clientY;
+                        this.handleDragStart(e, { type: 'list', playerId: player.id });
+                    };
+
+                    const handleTouchMove = (e) => {
+                        const touch = e.touches[0];
+                        if (Math.abs(touch.clientX - touchStartX) > 5 || Math.abs(touch.clientY - touchStartY) > 5) {
+                            hasMoved = true;
+                        }
+                    };
+
+                    const handleTouchEnd = (e) => {
+                        if (!hasMoved) {
+                            this.openEditModal(player.id);
+                        }
+                    };
+
+                    itemEl.addEventListener('dragstart', (e) => this.handleDragStart(e, { type: 'list', playerId: player.id }));
+                    itemEl.addEventListener('touchstart', handleTouchStart);
+                    itemEl.addEventListener('touchmove', handleTouchMove);
+                    itemEl.addEventListener('touchend', handleTouchEnd);
                 }
-                this.saveState();
-            };
-            
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp, { once: true });
-        };
-        marker.addEventListener('mousedown', handleMouseDown);
-    },
 
-// 開始
-// 修正箇所: renderPlayerList メソッドを丸ごと置き換え
-
-renderPlayerList() {
-    const assignedPlayerIds = new Set([
-        ...Object.values(this.state.starters).map(s => s.playerId),
-        ...Object.values(this.state.substitutes).flat()
-    ]);
-
-    if (this.isMobile) {
-        // ▼▼▼ スマートフォン用のレンダリング処理 ▼▼▼
-        const gridContainer = this.els.mobile.playerListGrid;
-        gridContainer.innerHTML = '';
-
-        if (this.state.squad.length === 0) {
-            gridContainer.innerHTML = '<p style="color:#888; grid-column: 1 / -1; text-align: center;">選手がいません。<br>「+」ボタンから追加してください。</p>';
-            return;
+                const role = (player.posCategory || 'fw').toLowerCase();
+                itemEl.innerHTML = `
+                    <div class="list-player-marker ${role}">
+                        <span class="list-player-number">${player.number}</span>
+                        <span class="list-player-name">${player.name}</span>
+                    </div>`;
+                
+                gridContainer.appendChild(itemEl);
+            });
+            return; 
         }
 
+        // ▼▼▼ PC用のレンダリング処理 (変更なし) ▼▼▼
+        const listContainer = this.els.sidebar.list;
+        listContainer.innerHTML = '';
+        if (this.state.squad.length === 0) {
+            listContainer.className = 'is-empty';
+            listContainer.textContent = '上のフォームから選手を追加してください。';
+            return;
+        }
+        listContainer.className = '';
+        
         this.state.squad.sort((a, b) => a.number - b.number).forEach(player => {
             const isAssigned = assignedPlayerIds.has(player.id);
             const itemEl = document.createElement('div');
-            itemEl.className = `list-player-item ${isAssigned ? 'is-assigned' : ''}`;
+            itemEl.className = `player-list-item ${isAssigned ? 'is-assigned' : ''}`;
+            itemEl.dataset.playerId = player.id;
+            itemEl.innerHTML = `
+                <span class="num">${player.number}</span>
+                <div class="name">
+                    <span>${player.name}</span>
+                    <button class="edit-player-btn" title="編集">✏️</button>
+                </div>`;
             
+            itemEl.querySelector('.edit-player-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.openEditModal(player.id);
+            });
+
             if (!isAssigned) {
                 itemEl.draggable = true;
                 itemEl.addEventListener('dragstart', (e) => this.handleDragStart(e, { type: 'list', playerId: player.id }));
             }
 
-            const role = (player.posCategory || 'fw').toLowerCase();
-            itemEl.innerHTML = `
-                <div class="list-player-marker ${role}">
-                    <span class="list-player-number">${player.number}</span>
-                    <span class="list-player-name">${player.name}</span>
-                </div>`;
-            
-
-            gridContainer.appendChild(itemEl);
-        });
-        return; 
-    }
-
-    // ▼▼▼ PC用のレンダリング処理 (変更なし) ▼▼▼
-    const listContainer = this.els.sidebar.list;
-    // (以下、既存のPC用コード)
-    listContainer.innerHTML = '';
-    if (this.state.squad.length === 0) {
-        listContainer.className = 'is-empty';
-        listContainer.textContent = '上のフォームから選手を追加してください。';
-        return;
-    }
-    listContainer.className = '';
-    
-    this.state.squad.sort((a, b) => a.number - b.number).forEach(player => {
-        const isAssigned = assignedPlayerIds.has(player.id);
-        const itemEl = document.createElement('div');
-        itemEl.className = `player-list-item ${isAssigned ? 'is-assigned' : ''}`;
-        itemEl.dataset.playerId = player.id;
-        itemEl.innerHTML = `
-            <span class="num">${player.number}</span>
-            <div class="name">
-                <span>${player.name}</span>
-                <button class="edit-player-btn" title="編集">✏️</button>
-            </div>`;
-        
-        itemEl.querySelector('.edit-player-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.openEditModal(player.id);
-        });
-
-        if (!isAssigned) {
-            itemEl.draggable = true;
-            itemEl.addEventListener('dragstart', (e) => this.handleDragStart(e, { type: 'list', playerId: player.id }));
-        }
-
-        itemEl.addEventListener('dblclick', () => {
-            this.openEditModal(player.id);
-        });
-
-        let longPressTimer;
-        const cancelLongPress = () => clearTimeout(longPressTimer);
-        const startLongPress = (e) => {
-            if (e.target.closest('.edit-player-btn')) return;
-            longPressTimer = setTimeout(() => {
-                navigator.vibrate?.(50);
+            itemEl.addEventListener('dblclick', () => {
                 this.openEditModal(player.id);
-                longPressTimer = null; 
-            }, 500); 
-        };
-        itemEl.addEventListener('touchstart', startLongPress, { passive: true });
-        itemEl.addEventListener('touchend', cancelLongPress);
-        itemEl.addEventListener('touchmove', cancelLongPress);
-
-        listContainer.appendChild(itemEl);
-    });
-},
-// 終了
-// 開始
-renderSubstitutes() {
-    if (this.isMobile) {
-        // ▼▼▼ スマホ用のレンダリング処理 ▼▼▼
-        const subsContainer = this.els.mobile.subsArea;
-        subsContainer.innerHTML = '';
-
-        ['GK', 'DF', 'MF', 'FW'].forEach(pos => {
-            const categoryEl = document.createElement('div');
-            categoryEl.className = 'sub-category-mobile';
-            categoryEl.innerHTML = `<span class="sub-category-mobile-label">${pos}</span>`;
-            
-            const playersWrapper = document.createElement('div');
-            playersWrapper.className = 'sub-players-wrapper';
-            
-            // カテゴリエリア自体をドロップゾーンにする
-            categoryEl.addEventListener('dragover', this.handleDragOver.bind(this));
-            categoryEl.addEventListener('dragleave', this.handleDragLeave.bind(this));
-            categoryEl.addEventListener('drop', (e) => this.handleDropOnSubZone(e, pos));
-            const playersInPos = (this.state.substitutes[pos] || [])
-                .map(id => this.state.squad.find(p => p.id === id)).filter(Boolean);
-
-            playersInPos.forEach(player => {
-                const role = (player.posCategory || 'fw').toLowerCase();
-                const chipEl = document.createElement('div');
-                chipEl.className = `sub-player-chip ${role}`;
-                chipEl.textContent = player.number;
-                chipEl.draggable = true;
-                chipEl.dataset.playerId = player.id; // データ属性を追加
-                chipEl.addEventListener('dragstart', (e) => this.handleDragStart(e, { type: 'substitute', playerId: player.id, category: pos }));
-                playersWrapper.appendChild(chipEl);
             });
-            categoryEl.appendChild(playersWrapper);
-            subsContainer.appendChild(categoryEl);
+
+            listContainer.appendChild(itemEl);
         });
-        return; // スマホの場合はここで処理終了
-    }
+    },
 
-    // ▼▼▼ 以下は既存のPC用レンダリング処理 ▼▼▼
-    const zone = document.querySelector('.sub-drop-zone');
-    zone.innerHTML = '';
-    const allSubIds = Object.values(this.state.substitutes).flat();
-    
-    allSubIds.forEach(playerId => {
-        const player = this.state.squad.find(p => p.id === playerId);
-        if (!player) return;
-        const subItem = document.createElement('div');
-        subItem.className = 'substitute-item';
-        subItem.dataset.playerId = playerId;
-        subItem.draggable = true;
-        subItem.addEventListener('dragstart', (e) => this.handleDragStart(e, { type: 'substitute', playerId, category: player.posCategory }));
-        subItem.innerHTML = `
-            <span class="num">${player.number}</span>
-            <span class="name">${player.name}</span>
-            <button class="unassign-btn-sub">&times;</button>`;
-        subItem.querySelector('.unassign-btn-sub').addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.unassignPlayer(playerId);
-            this.renderAll();
-        });
-        zone.appendChild(subItem);
-    });
-},
-// 終了
+    renderSubstitutes() {
+        if (this.isMobile) {
+            const subsContainer = this.els.mobile.subsArea;
+            subsContainer.innerHTML = '';
 
-// 修正箇所: handleDragStart メソッドを丸ごと置き換え
+            ['GK', 'DF', 'MF', 'FW'].forEach(pos => {
+                const categoryEl = document.createElement('div');
+                categoryEl.className = 'sub-category-mobile';
+                categoryEl.innerHTML = `<span class="sub-category-mobile-label">${pos}</span>`;
+                
+                const playersWrapper = document.createElement('div');
+                playersWrapper.className = 'sub-players-wrapper';
+                
+                categoryEl.addEventListener('dragover', this.handleDragOver.bind(this));
+                categoryEl.addEventListener('dragleave', this.handleDragLeave.bind(this));
+                categoryEl.addEventListener('drop', (e) => this.handleDropOnSubZone(e, pos));
+                const playersInPos = (this.state.substitutes[pos] || [])
+                    .map(id => this.state.squad.find(p => p.id === id)).filter(Boolean);
 
-handleDragStart(e, data) {
-    this.isDraggingPlayer = true;
-    this._lastDragStartType = data.type; // どのエリアからドラッグが始まったか記録
-    
-    if (this.isMobile) {
-        this.els.mobile.unassignBumper.classList.add('is-visible');
-        // ドラッグ元がリストの場合、パネルを自動で閉じる
-        if (data.type === 'list') {
-            this.els.mobile.playerListPanel.classList.remove('is-open');
+                playersInPos.forEach(player => {
+                    const role = (player.posCategory || 'fw').toLowerCase();
+                    const chipEl = document.createElement('div');
+                    chipEl.className = `sub-player-chip ${role}`;
+                    chipEl.textContent = player.number;
+                    chipEl.draggable = true;
+                    chipEl.dataset.playerId = player.id;
+                    chipEl.addEventListener('dragstart', (e) => this.handleDragStart(e, { type: 'substitute', playerId: player.id, category: pos }));
+                    chipEl.addEventListener('touchstart', (e) => this.handleDragStart(e, { type: 'substitute', playerId: player.id, category: pos }), { passive: true });
+                    playersWrapper.appendChild(chipEl);
+                });
+                categoryEl.appendChild(playersWrapper);
+                subsContainer.appendChild(categoryEl);
+            });
+            return;
         }
-    }
-    
-    e.dataTransfer.setData('application/json', JSON.stringify(data));
-    e.dataTransfer.effectAllowed = 'move';
-    const player = this.state.squad.find(p => p.id === data.playerId);
-    if (player) {
-        this.els.dragGhost.innerHTML = `<span class="num">${player.number}</span><span class="name">${player.name}</span>`;
-        e.dataTransfer.setDragImage(this.els.dragGhost, 15, 15);
-    }
-    e.stopPropagation();
-    
-    if (this.els.sidebar.el.classList.contains('is-open')) {
-        this.closeSidebar(true);
-    }
-},
-// 修正箇所: handleDragEnd メソッドを丸ごと置き換え
 
-handleDragEnd(e) {
-    if (!this.isDraggingPlayer) return;
-    this.isDraggingPlayer = false;
-
-    if (this.isMobile) {
-        this.els.mobile.unassignBumper.classList.remove('is-visible', 'is-droppable');
+        const zone = document.querySelector('.sub-drop-zone');
+        zone.innerHTML = '';
+        const allSubIds = Object.values(this.state.substitutes).flat();
         
-        // ドラッグ開始元がリストだった場合、ドロップ後にパネルを再表示
-        if (this._lastDragStartType === 'list') {
-            // 少し遅延させることで、ドロップ処理が完了してからパネルを開く
-            setTimeout(() => {
-                this.els.mobile.playerListPanel.classList.add('is-open');
-            }, 100); 
+        allSubIds.forEach(playerId => {
+            const player = this.state.squad.find(p => p.id === playerId);
+            if (!player) return;
+            const subItem = document.createElement('div');
+            subItem.className = 'substitute-item';
+            subItem.dataset.playerId = playerId;
+            subItem.draggable = true;
+            subItem.addEventListener('dragstart', (e) => this.handleDragStart(e, { type: 'substitute', playerId, category: player.posCategory }));
+            subItem.innerHTML = `
+                <span class="num">${player.number}</span>
+                <span class="name">${player.name}</span>
+                <button class="unassign-btn-sub">&times;</button>`;
+            subItem.querySelector('.unassign-btn-sub').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.unassignPlayer(playerId);
+                this.renderAll();
+            });
+            zone.appendChild(subItem);
+        });
+    },
+
+	handleDragStart(e, data) {
+		if (this.isMobile) {
+			this.els.mobile.unassignBumper.classList.add('is-visible');
+			if (data.type === 'list') {
+				this.els.mobile.playerListPanel.classList.remove('is-open');
+			}
+		}
+
+		this.isDraggingPlayer = true;
+		this._lastDragStartType = data.type; 
+		
+		const player = this.state.squad.find(p => p.id === data.playerId);
+		if (!player) return;
+
+		if (e.type === 'touchstart') {
+			e.preventDefault(); 
+			
+			const draggedEl = e.currentTarget; 
+			
+			if (this.state.config.dragMode === 'position' && data.type === 'pitch') {
+				const touch = e.touches[0];
+				const simulatedMouseEvent = new MouseEvent('mousedown', {
+					bubbles: true,
+					cancelable: true,
+					clientX: touch.clientX,
+					clientY: touch.clientY
+				});
+				draggedEl.querySelector('.player-marker').dispatchEvent(simulatedMouseEvent);
+				return;
+			}
+
+			draggedEl.style.transition = 'none'; 
+			draggedEl.style.zIndex = '2000';     
+			draggedEl.style.opacity = '0.7';     
+
+			const touch = e.touches[0];
+			const rect = draggedEl.getBoundingClientRect();
+			const offsetX = touch.clientX - rect.left;
+			const offsetY = touch.clientY - rect.top;
+
+			const updatePosition = (touchEvent) => {
+				const currentTouch = touchEvent.touches[0];
+				draggedEl.style.position = 'absolute';
+				draggedEl.style.left = `${currentTouch.pageX - offsetX}px`;
+				draggedEl.style.top = `${currentTouch.pageY - offsetY}px`;
+			};
+
+			updatePosition(e);
+
+			document.addEventListener('touchmove', updatePosition);
+			
+			document.addEventListener('touchend', (endEvent) => {
+				document.removeEventListener('touchmove', updatePosition);
+				
+				draggedEl.style.display = 'none';
+				const dropTarget = document.elementFromPoint(endEvent.changedTouches[0].clientX, endEvent.changedTouches[0].clientY);
+				
+				const customDropEvent = new Event('drop', { bubbles: true });
+				customDropEvent.dataTransfer = {
+					getData: () => JSON.stringify(data)
+				};
+				dropTarget?.dispatchEvent(customDropEvent);
+				
+				this.renderAll(); 
+				this.handleDragEnd();
+
+			}, { once: true });
+
+		} else {
+			const ghostEl = this.els.dragGhost;
+			ghostEl.innerHTML = `<span class="num">${player.number}</span><span class="name">${player.name}</span>`;
+			e.dataTransfer.setData('application/json', JSON.stringify(data));
+			e.dataTransfer.effectAllowed = 'move';
+			e.dataTransfer.setDragImage(ghostEl, 15, 15);
+		}
+		
+		e.stopPropagation();
+		
+		if (this.els.sidebar.el.classList.contains('is-open')) {
+			this.closeSidebar(true);
+		}
+	},
+
+    handleDragEnd(e) {
+        if (!this.isDraggingPlayer) return;
+        this.isDraggingPlayer = false;
+
+        if (this.isMobile) {
+            this.els.mobile.unassignBumper.classList.remove('is-visible', 'is-droppable');
+            
+            if (this._lastDragStartType === 'list') {
+                setTimeout(() => {
+                    this.els.mobile.playerListPanel.classList.add('is-open');
+                }, 100); 
+            }
         }
-    }
-    this._lastDragStartType = null; // 記録をリセット
-},
+        this._lastDragStartType = null;
+    },
 
     handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drop-target-hover'); },
     handleDragLeave(e) { e.currentTarget.classList.remove('drop-target-hover'); },
 
     handleDropOnPitch(e, targetPosId) {
+        if (!this.isDraggingPlayer) return;
         e.preventDefault(); e.stopPropagation();
         e.currentTarget.classList.remove('drop-target-hover');
         const data = JSON.parse(e.dataTransfer.getData('application/json'));
@@ -1537,29 +1611,28 @@ handleDragEnd(e) {
         this.renderAll();
     },
 
-// handleDropOnSubZoneメソッドを丸ごと置き換え
-handleDropOnSubZone(e, mobilePosCategory = null) {
-    e.preventDefault(); e.stopPropagation();
-    e.currentTarget.classList.remove('drop-target-hover');
+    handleDropOnSubZone(e, mobilePosCategory = null) {
+        e.preventDefault(); e.stopPropagation();
+        e.currentTarget.classList.remove('drop-target-hover');
 
-    try {
-        const data = JSON.parse(e.dataTransfer.getData('application/json'));
-        const player = this.state.squad.find(p => p.id === data.playerId);
+        try {
+            const data = JSON.parse(e.dataTransfer.getData('application/json'));
+            const player = this.state.squad.find(p => p.id === data.playerId);
 
-        if (player) {
-            this.unassignPlayer(data.playerId);
-            const targetCategory = this.isMobile ? mobilePosCategory : player.posCategory;
-            
-            if (!this.state.substitutes[targetCategory]) {
-                this.state.substitutes[targetCategory] = [];
+            if (player) {
+                this.unassignPlayer(data.playerId);
+                const targetCategory = player.posCategory; 
+                
+                if (!this.state.substitutes[targetCategory]) {
+                    this.state.substitutes[targetCategory] = [];
+                }
+                this.state.substitutes[targetCategory].push(data.playerId);
+                this.renderAll();
             }
-            this.state.substitutes[targetCategory].push(data.playerId);
-            this.renderAll();
+        } catch (err) {
+            console.error("Drop failed:", err);
         }
-    } catch (err) {
-        console.error("Drop failed:", err);
-    }
-},
+    },
 
     unassignPlayer(playerId) {
         for (const posId in this.state.starters) {
@@ -1576,10 +1649,10 @@ handleDropOnSubZone(e, mobilePosCategory = null) {
     addPlayer() {
         const number = this.els.sidebar.numberInput.value;
         const name = this.els.sidebar.nameInput.value.trim();
-        const posCategory = this.els.sidebar.posSelect.value; // 追加
+        const posCategory = this.els.sidebar.posSelect.value;
         if (!number || !name) { alert('背番号と選手名を入力してください。'); return; }
         if (this.state.squad.some(p => p.number === parseInt(number))) { alert('この背番号は既に使用されています。'); return; }
-        this.state.squad.push({ id: `p_${Date.now()}`, number: parseInt(number), name, posCategory }); // 変更
+        this.state.squad.push({ id: `p_${Date.now()}`, number: parseInt(number), name, posCategory });
         this.els.sidebar.numberInput.value = '';
         this.els.sidebar.nameInput.value = '';
         this.els.sidebar.numberInput.focus();
@@ -1709,40 +1782,40 @@ handleDropOnSubZone(e, mobilePosCategory = null) {
         this.editingPlayerId = playerId;
         this.els.editModal.numberInput.value = player.number;
         this.els.editModal.nameInput.value = player.name;
-        this.els.editModal.posSelect.value = player.posCategory || 'FW'; // 追加
+        this.els.editModal.posSelect.value = player.posCategory || 'FW';
         this.openModal(this.els.editModal.overlay);
     },
 
-savePlayerChanges() {
-    const newNumber = parseInt(this.els.editModal.numberInput.value, 10);
-    const newName = this.els.editModal.nameInput.value.trim();
-    const newPosCategory = this.els.editModal.posSelect.value;
+    savePlayerChanges() {
+        const newNumber = parseInt(this.els.editModal.numberInput.value, 10);
+        const newName = this.els.editModal.nameInput.value.trim();
+        const newPosCategory = this.els.editModal.posSelect.value;
 
-    if (!newNumber || !newName) {
-        alert('背番号と選手名を入力してください。');
-        return;
-    }
+        if (!newNumber || !newName) {
+            alert('背番号と選手名を入力してください。');
+            return;
+        }
 
-    if (this.editingPlayerId) { // --- 更新の場合 ---
-        const player = this.state.squad.find(p => p.id === this.editingPlayerId);
-        if (player) {
-            if (this.state.squad.some(p => p.number === newNumber && p.id !== player.id)) {
-                alert('その背番号は既に使用されています。'); return;
+        if (this.editingPlayerId) {
+            const player = this.state.squad.find(p => p.id === this.editingPlayerId);
+            if (player) {
+                if (this.state.squad.some(p => p.number === newNumber && p.id !== player.id)) {
+                    alert('その背番号は既に使用されています。'); return;
+                }
+                player.number = newNumber;
+                player.name = newName;
+                player.posCategory = newPosCategory;
             }
-            player.number = newNumber;
-            player.name = newName;
-            player.posCategory = newPosCategory;
+        } else {
+            if (this.state.squad.some(p => p.number === newNumber)) {
+                alert('この背番号は既に使用されています。'); return;
+            }
+            this.state.squad.push({ id: `p_${Date.now()}`, number: newNumber, name: newName, posCategory: newPosCategory });
         }
-    } else { // --- 新規追加の場合 ---
-        if (this.state.squad.some(p => p.number === newNumber)) {
-            alert('この背番号は既に使用されています。'); return;
-        }
-        this.state.squad.push({ id: `p_${Date.now()}`, number: newNumber, name: newName, posCategory: newPosCategory });
-    }
 
-    this.renderAll();
-    this.closeAllModals();
-},
+        this.renderAll();
+        this.closeAllModals();
+    },
 
     deletePlayerFromModal() {
         if (this.editingPlayerId && confirm('この選手をリストから完全に削除しますか？\nこの操作は元に戻せません。')) {
@@ -1773,27 +1846,25 @@ savePlayerChanges() {
         this.toastTimer = setTimeout(() => { this.els.modeToast.classList.remove('show'); }, 1500);
     },
     
-saveImage() {
-    const allSubs = Object.values(this.state.substitutes).flat();
-    if (allSubs.length > 9) {
-        const proceed = confirm(
-            `警告：控え選手の人数が9人を超えています（現在 ${allSubs.length}人）。\n公式ルールでは認められていませんが、このまま画像を保存しますか？`
-        );
-        if (!proceed) {
-            this.closeAllModals(); // スマホのハンバーガーメニューを閉じる
-            return; // 保存をキャンセル
+    saveImage() {
+        const allSubs = Object.values(this.state.substitutes).flat();
+        if (allSubs.length > 9) {
+            const proceed = confirm(
+                `警告：控え選手の人数が9人を超えています（現在 ${allSubs.length}人）。\n公式ルールでは認められていませんが、このまま画像を保存しますか？`
+            );
+            if (!proceed) {
+                this.closeAllModals();
+                return;
+            }
         }
-    }
         const originalArea = document.getElementById('capture-area');
-        // メモリ上で要素のクローンを作成
         const cloneArea = originalArea.cloneNode(true);
         cloneArea.style.position = 'absolute';
-        cloneArea.style.left = '-9999px'; // 画面外に配置
+        cloneArea.style.left = '-9999px';
         cloneArea.style.top = '0px';
-        cloneArea.style.width = originalArea.offsetWidth + 'px'; // 元のサイズを維持
+        cloneArea.style.width = originalArea.offsetWidth + 'px';
         document.body.appendChild(cloneArea);
 
-        // クローンに対してのみ、画像出力用の変更を加える
         let subsHTML = '';
         ['GK', 'DF', 'MF', 'FW'].forEach(pos => {
             const playersInPos = (this.state.substitutes[pos] || [])
@@ -1812,7 +1883,8 @@ saveImage() {
         }
 
         const captureTitle = cloneArea.querySelector('#capture-title');
-    const titleInput = this.isMobile ? this.els.mobile.titleInput : this.els.titleInput;        if (captureTitle) {
+        const titleInput = this.isMobile ? this.els.mobile.titleInput : this.els.titleInput;
+        if (captureTitle) {
             captureTitle.textContent = titleInput.value || titleInput.placeholder;
             captureTitle.style.display = 'block';
         }
@@ -1824,7 +1896,6 @@ saveImage() {
         
         cloneArea.classList.add('is-capturing');
 
-        // クローンした要素を画像化
         html2canvas(cloneArea, { backgroundColor: '#4a8d4d', scale: 3 }).then(canvas => {
             const link = document.createElement('a');
             const fileName = (titleInput.value || 'tactical-canvas').replace(/[\\/:"*?<>|]/g, '').replace(/\s+/g, '_');
@@ -1832,7 +1903,6 @@ saveImage() {
             link.href = canvas.toDataURL('image/png');
             link.click();
         }).finally(() => {
-            // 終わったらクローンを削除
             document.body.removeChild(cloneArea);
         });
     },
@@ -1961,38 +2031,35 @@ saveImage() {
         }
     },
 
-setupMouseSidebar() {
-    const sidebar = this.els.sidebar.el;
-    const handle = this.els.sidebarHandle;
+    setupMouseSidebar() {
+        const sidebar = this.els.sidebar.el;
+        const handle = this.els.sidebarHandle;
 
-    handle.addEventListener('mouseenter', () => {
-        this.sidebarHoverTimer = setTimeout(() => {
-            this.openSidebar();
-        }, 200);
-    });
+        handle.addEventListener('mouseenter', () => {
+            this.sidebarHoverTimer = setTimeout(() => {
+                this.openSidebar();
+            }, 200);
+        });
 
-    handle.addEventListener('mouseleave', () => clearTimeout(this.sidebarHoverTimer));
+        handle.addEventListener('mouseleave', () => clearTimeout(this.sidebarHoverTimer));
 
-    sidebar.addEventListener('mouseleave', () => {
-        // ▼▼▼ ここからが変更点 ▼▼▼
-        // アクティブな要素がサイドバー内の入力フォームでないかチェック
-        const activeEl = document.activeElement;
-        const isTypingInSidebar = 
-            activeEl === this.els.sidebar.numberInput ||
-            activeEl === this.els.sidebar.nameInput ||
-            activeEl === this.els.sidebar.posSelect;
+        sidebar.addEventListener('mouseleave', () => {
+            const activeEl = document.activeElement;
+            const isTypingInSidebar = 
+                activeEl === this.els.sidebar.numberInput ||
+                activeEl === this.els.sidebar.nameInput ||
+                activeEl === this.els.sidebar.posSelect;
 
-        if (isTypingInSidebar) {
-            return; // 入力中は閉じない
-        }
-        // ▲▲▲ ここまでが変更点 ▲▲▲
+            if (isTypingInSidebar) {
+                return;
+            }
 
-        clearTimeout(this.sidebarHoverTimer);
-        this.closeSidebar();
-    });
+            clearTimeout(this.sidebarHoverTimer);
+            this.closeSidebar();
+        });
 
-    this.els.pinSidebarBtn.addEventListener('click', () => this.toggleSidebarPin());
-},
+        this.els.pinSidebarBtn.addEventListener('click', () => this.toggleSidebarPin());
+    },
 
     setupTouchSidebar() {
         const sidebar = this.els.sidebar.el;
@@ -2032,7 +2099,6 @@ setupMouseSidebar() {
         document.addEventListener('touchmove', dragMove, { passive: true });
         document.addEventListener('touchend', dragEnd);
 
-        // サイドバーの外側タップで閉じる
         document.addEventListener('click', (e) => {
             if (sidebar.classList.contains('is-open') && !sidebar.contains(e.target) && !e.target.closest('.sidebar-handle') && !e.target.closest('#open-sidebar-btn')) {
                 this.closeSidebar(true);
@@ -2071,12 +2137,9 @@ if ('serviceWorker' in navigator) {
 
     navigator.serviceWorker.register('./sw.js').then(reg => {
         reg.addEventListener('updatefound', () => {
-            // 新しいService Workerがインストール中
             newWorker = reg.installing;
             newWorker.addEventListener('statechange', () => {
-                // インストールが完了し、待機状態になった
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    // 更新通知UIを表示
                     const notification = document.getElementById('update-notification');
                     if (notification) notification.style.display = 'flex';
                 }
@@ -2084,17 +2147,15 @@ if ('serviceWorker' in navigator) {
         });
     });
 
-    // 更新ボタンのクリックイベント
     const updateBtn = document.getElementById('update-btn');
     if (updateBtn) {
         updateBtn.addEventListener('click', () => {
             if (newWorker) {
-                newWorker.postMessage({ action: 'skipWaiting' }); // Service Workerに更新を指示
+                newWorker.postMessage({ action: 'skipWaiting' });
             }
         });
     }
 
-    // Service Workerが更新され、コントローラーが変更されたらページをリロード
     let refreshing;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (refreshing) return;
