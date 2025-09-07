@@ -72,8 +72,7 @@
             background-image: repeating-linear-gradient(90deg, transparent, transparent 4.8%, rgba(0,0,0,0.05) 5%, transparent 5.2%);
             border: 3px solid var(--line-color); border-radius: 10px; box-sizing: border-box; overflow: hidden;
         }
-        .pitch-wrapper.vertical .pitch { padding-top: 125%; background-image: repeating-linear-gradient(0deg, transparent, transparent 4.8%, rgba(0,0,0,0.05) 5%, transparent 5.2%); } 
-        .pitch-wrapper.horizontal .pitch { padding-top: 70%; }
+        .pitch-wrapper.vertical .pitch { padding-top: 120%; background-image: repeating-linear-gradient(0deg, transparent, transparent 4.8%, rgba(0,0,0,0.05) 5%, transparent 5.2%); }         .pitch-wrapper.horizontal .pitch { padding-top: 70%; }
         
         .pitch-line { position: absolute; box-sizing: border-box; border-color: var(--line-color); border-style: solid; }
         .vertical .center-line   { width: 100%; height: 3px; background-color: var(--line-color); top: 0; left: 0; }
@@ -408,7 +407,7 @@ body.is-mobile .main-content {
     width: 100%;
     min-width: 0; /* PC用の最小幅(400px)をここで解除します */
     min-height: 0;
-    padding: 10px;
+    padding: 0 10px 10px;
     box-sizing: border-box; /* paddingを含めて幅を100%に収めます */
 }
 
@@ -455,15 +454,15 @@ body.is-mobile .pc-ui-wrapper {
         box-sizing: border-box; /* ← この一行を追加！ */
 
     }
-    #mobile-title-input {
-        flex-grow: 1;
-        border: none;
-        background: transparent;
-        font-size: 18px;
+        #mobile-title-input {
+        width: 100%;
+        padding: 10px;
+        font-size: 16px;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        box-sizing: border-box;
         font-weight: bold;
         outline: none;
-        min-width: 0; /* ← この一行を追加！ */
-
     }
 
 
@@ -542,18 +541,27 @@ body.is-mobile .pc-ui-wrapper {
     #mobile-player-list-btn.bottom-left {
         left: 15px; bottom: calc(15px + var(--safe-area-inset-bottom));
     }
-    .mobile-formation-fab {
+            .mobile-formation-fab {
         position: fixed;
-        top: calc(70px + var(--safe-area-inset-top)); /* ヘッダーの高さに応じて調整 */
-        left: 50%; transform: translateX(-50%);
-        padding: 8px 16px;
-        border-radius: 20px;
-        background-color: rgba(0, 0, 0, 0.6);
-        color: white; font-size: 14px;
+        left: 50%;
+        bottom: calc(15px + var(--safe-area-inset-bottom));
+        transform: translateX(-50%);
+        width: auto; /* 横幅を自動調整に変更 */
+        height: 44px; /* 高さを少し小さく */
+        border-radius: 22px; /* 角を丸くする */
+        padding: 0 20px; /* 横の余白を追加 */
+        background-color: #6c757d;
+        color: white;
         border: none;
-        z-index: 100;
-        opacity: 0.8;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 14px;
+        font-weight: bold;
+        z-index: 1200;
+        transition: transform 0.2s, background-color 0.2s;
     }
 
     #mobile-player-list-panel {
@@ -726,6 +734,38 @@ body.is-mobile .pc-ui-wrapper {
         }
 /* --- END: スマホUI改善スタイル --- */
 /* --- END: スマートフォンUIスタイル --- */
+/* --- START: スマホUIヘッダー改修スタイル --- */
+@media (max-width: 768px) {
+    .mobile-header h2#mobile-app-logo {
+        margin: 0;
+        font-size: 22px;
+        color: var(--primary-color);
+        flex-grow: 1;
+        line-height: 1;
+        font-family: 'Helvetica Neue', Arial, sans-serif;
+    }
+    .mobile-title-wrapper {
+        padding: 0 15px 10px 15px;
+        background: #f8f9fa;
+        flex-shrink: 0;
+        box-sizing: border-box;
+    }
+}
+/* --- END: スマホUIヘッダー改修スタイル --- */
+/* --- START: ロゴ画像差し替え準備スタイル --- */
+@media (max-width: 768px) {
+    .mobile-logo-link {
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        flex-grow: 1;
+    }
+    .mobile-logo-link img {
+        height: 28px; /* ロゴ画像の高さを指定 */
+        width: auto;
+    }
+}
+/* --- END: ロゴ画像差し替え準備スタイル --- */
     </style>
 </head>
 <body data-layout-mode="vertical" data-drag-mode="swap">
@@ -733,10 +773,15 @@ body.is-mobile .pc-ui-wrapper {
         <span>新しいバージョンが利用可能です。</span>
         <button id="update-btn" style="width: auto; padding: 6px 12px; font-size: 13px; background-color: var(--primary-color); color: white; border: none; border-radius: 5px; cursor: pointer;">更新</button>
     </div>
-        <header class="mobile-header">
-        <input type="text" id="mobile-title-input" placeholder="スタメン予想">
-        <button id="mobile-hamburger-btn" class="mobile-fab">≡</button>
+                <header class="mobile-header">
+        <!-- ロゴ部分：将来的に画像に差し替える場合は、下の<h2>タグを<img src="画像のパス">に置き換えます -->
+        <a href="./index.html" class="mobile-logo-link">
+            <h2 id="mobile-app-logo">XISync</h2>
+        </a>        <button id="mobile-hamburger-btn" class="mobile-fab">≡</button>
     </header>
+        <div class="mobile-title-wrapper">
+        <input type="text" id="mobile-title-input" placeholder="スタメン予想">
+    </div>
 
     <div id="mobile-player-list-panel">
         <div class="panel-header">
@@ -1066,8 +1111,7 @@ const App = {
 
     defineConstants() {
         this.formations = {'4-3-3':{name:'4-3-3',note:'',spec:[{pos:'GK'},{pos:'RSB'},{pos:'RCB'},{pos:'LCB'},{pos:'LSB'},{pos:'DMF'},{pos:'RCM'},{pos:'LCM'},{pos:'RWG'},{pos:'CF'},{pos:'LWG'}]},'4-4-2':{name:'4-4-2',note:'',spec:[{pos:'GK'},{pos:'RSB'},{pos:'RCB'},{pos:'LCB'},{pos:'LSB'},{pos:'RMF'},{pos:'CMF'},{pos:'CMF',isDuplicate:true},{pos:'LMF'},{pos:'FW'},{pos:'FW',isDuplicate:true}]},'4-2-3-1':{name:'4-2-3-1',note:'Standard',spec:[{pos:'GK'},{pos:'RSB'},{pos:'RCB'},{pos:'LCB'},{pos:'LSB'},{pos:'DMF'},{pos:'DMF',isDuplicate:true},{pos:'RMF'},{pos:'AMF'},{pos:'LMF'},{pos:'CF'}]},'4-1-4-1':{name:'4-1-4-1',note:'',spec:[{pos:'GK'},{pos:'RSB'},{pos:'RCB'},{pos:'LCB'},{pos:'LSB'},{pos:'DMF'},{pos:'RMF'},{pos:'RCM'},{pos:'LCM'},{pos:'LMF'},{pos:'CF'}]},'4-3-1-2':{name:'4-3-1-2',note:'Diamond',spec:[{pos:'GK'},{pos:'RSB'},{pos:'RCB'},{pos:'LCB'},{pos:'LSB'},{pos:'DMF'},{pos:'RCM'},{pos:'LCM'},{pos:'AMF'},{pos:'FW'},{pos:'FW',isDuplicate:true}]},'4-3-2-1':{name:'4-3-2-1',note:'Tree',spec:[{pos:'GK'},{pos:'RSB'},{pos:'RCB'},{pos:'LCB'},{pos:'LSB'},{pos:'RCM'},{pos:'CMF'},{pos:'LCM'},{pos:'RAM'},{pos:'LAM'},{pos:'CF'}]},'3-5-2':{name:'3-5-2',note:'',spec:[{pos:'GK'},{pos:'RCB'},{pos:'CB'},{pos:'LCB'},{pos:'RWB'},{pos:'RCM'},{pos:'DMF'},{pos:'LCM'},{pos:'LWB'},{pos:'FW'},{pos:'FW',isDuplicate:true}]},'3-4-3':{name:'3-4-3',note:'',spec:[{pos:'GK'},{pos:'RCB'},{pos:'CB'},{pos:'LCB'},{pos:'RMF'},{pos:'CMF'},{pos:'CMF',isDuplicate:true},{pos:'LMF'},{pos:'RWG'},{pos:'CF'},{pos:'LWG'}]},'3-4-2-1':{name:'3-4-2-1',note:'',spec:[{pos:'GK'},{pos:'RCB'},{pos:'CB'},{pos:'LCB'},{pos:'RWB'},{pos:'DMF'},{pos:'DMF',isDuplicate:true},{pos:'LWB'},{pos:'RAM'},{pos:'LAM'},{pos:'CF'}]},'5-3-2':{name:'5-3-2',note:'',spec:[{pos:'GK'},{pos:'RCB'},{pos:'CB'},{pos:'LCB'},{pos:'RWB'},{pos:'LWB'},{pos:'RCM'},{pos:'CMF'},{pos:'LCM'},{pos:'FW'},{pos:'FW',isDuplicate:true}]},'5-4-1':{name:'5-4-1',note:'',spec:[{pos:'GK'},{pos:'RSB'},{pos:'RCB'},{pos:'CB'},{pos:'LCB'},{pos:'LSB'},{pos:'RMF'},{pos:'RCM'},{pos:'LCM'},{pos:'LMF'},{pos:'CF'}]}};
-        this.formationCoords = {'4-3-3':[{top:50,left:8},{top:85,left:28},{top:65,left:25},{top:35,left:25},{top:15,left:28},{top:50,left:48},{top:70,left:60},{top:30,left:60},{top:80,left:80},{top:50,left:85},{top:20,left:80}],'4-4-2':[{top:50,left:8},{top:85,left:28},{top:65,left:25},{top:35,left:25},{top:15,left:28},{top:85,left:55},{top:60,left:50},{top:40,left:50},{top:15,left:55},{top:65,left:78},{top:35,left:78}],'4-2-3-1':[{top:50,left:8},{top:85,left:28},{top:65,left:25},{top:35,left:25},{top:15,left:28},{top:65,left:48},{top:35,left:48},{top:80,left:70},{top:50,left:72},{top:20,left:70},{top:50,left:88}],'4-1-4-1':[{top:50,left:8},{top:85,left:28},{top:65,left:25},{top:35,left:25},{top:15,left:28},{top:50,left:45},{top:85,left:65},{top:65,left:62},{top:35,left:62},{top:15,left:65},{top:50,left:85}],'4-3-1-2':[{top:50,left:8},{top:85,left:28},{top:65,left:25},{top:35,left:25},{top:15,left:28},{top:50,left:45},{top:75,left:55},{top:25,left:55},{top:50,left:70},{top:65,left:85},{top:35,left:85}],'4-3-2-1':[{top:50,left:8},{top:85,left:28},{top:65,left:25},{top:35,left:25},{top:15,left:28},{top:70,left:55},{top:50,left:50},{top:30,left:55},{top:65,left:75},{top:35,left:75},{top:50,left:88}],'3-5-2':[{top:50,left:8},{top:75,left:28},{top:50,left:25},{top:25,left:28},{top:90,left:55},{top:70,left:50},{top:50,left:42},{top:30,left:50},{top:10,left:55},{top:65,left:82},{top:35,left:82}],'3-4-3':[{top:50,left:8},{top:75,left:28},{top:50,left:25},{top:25,left:28},{top:85,left:58},{top:65,left:52},{top:35,left:52},{top:15,left:58},{top:80,left:80},{top:50,left:85},{top:20,left:80}],'3-4-2-1':[{top:50,left:8},{top:75,left:28},{top:50,left:25},{top:25,left:28},{top:85,left:58},{top:65,left:50},{top:35,left:50},{top:15,left:58},{top:65,left:78},{top:35,left:78},{top:50,left:88}],'5-3-2':[{top:50,left:8},{top:75,left:28},{top:50,left:25},{top:25,left:28},{top:90,left:35},{top:10,left:35},{top:75,left:60},{top:50,left:55},{top:25,left:60},{top:65,left:82},{top:35,left:82}],'5-4-1':[{top:50,left:8},{top:90,left:28},{top:70,left:25},{top:50,left:22},{top:30,left:25},{top:10,left:28},{top:85,left:58},{top:60,left:52},{top:40,left:52},{top:15,left:58},{top:50,left:82}]};
-        this.svgIcons = {position:'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 1.707V5.5a.5.5 0 0 1-1 0V1.707L6.354 2.854a.5.5 0 1 1-.708-.708l2-2zM8 10a.5.5 0 0 1 .5.5v3.793l1.146-1.147a.5.5 0 0 1 .708.708l-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 0 1 .708-.708L7.5 14.293V10.5A.5.5 0 0 1 8 10zM.146 8.354a.5.5 0 0 1 0-.708l2-2a.5.5 0 1 1 .708.708L1.707 7.5H5.5a.5.5 0 0 1 0 1H1.707l1.147 1.146a.5.5 0 0 1-.708.708l-2-2zM10 8a.5.5 0 0 1 .5-.5h3.793l-1.147-1.146a.5.5 0 0 1 .708-.708l2 2a.5.5 0 0 1 0 .708l-2 2a.5.5 0 0 1-.708-.708L14.293 8.5H10.5A.5.5 0 0 1 10 8z"/></svg>',swap:'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1 11.5a.5.5 0 0 0 .5.5h11.793l-1.147 1.146a.5.5 0 0 0 .708.708l2-2a.5.5 0 0 0 0-.708l-2-2a.5.5 0 0 0-.708.708L13.293 11H1.5a.5.5 0 0 0-.5.5zm14-7a.5.5 0 0 1-.5.5H2.707l1.147 1.146a.5.5 0 1 1-.708.708l-2-2a.5.5 0 0 1 0-.708l2-2a.5.5 0 1 1 .708.708L2.707 4H14.5a.5.5 0 0 1 .5.5z"/></svg>'};
+        this.formationCoords = {'4-3-3':[{top:50,left:8},{top:85,left:28},{top:65,left:25},{top:35,left:25},{top:15,left:28},{top:50,left:48},{top:70,left:60},{top:30,left:60},{top:80,left:80},{top:50,left:90},{top:20,left:80}],'4-4-2':[{top:50,left:8},{top:85,left:28},{top:65,left:25},{top:35,left:25},{top:15,left:28},{top:85,left:55},{top:60,left:50},{top:40,left:50},{top:15,left:55},{top:65,left:82},{top:35,left:82}],'4-2-3-1':[{top:50,left:8},{top:85,left:28},{top:65,left:25},{top:35,left:25},{top:15,left:28},{top:65,left:48},{top:35,left:48},{top:80,left:70},{top:50,left:72},{top:20,left:70},{top:50,left:92}],'4-1-4-1':[{top:50,left:8},{top:85,left:28},{top:65,left:25},{top:35,left:25},{top:15,left:28},{top:50,left:45},{top:85,left:65},{top:65,left:62},{top:35,left:62},{top:15,left:65},{top:50,left:88}],'4-3-1-2':[{top:50,left:8},{top:85,left:28},{top:65,left:25},{top:35,left:25},{top:15,left:28},{top:50,left:45},{top:75,left:55},{top:25,left:55},{top:50,left:70},{top:65,left:88},{top:35,left:88}],'4-3-2-1':[{top:50,left:8},{top:85,left:28},{top:65,left:25},{top:35,left:25},{top:15,left:28},{top:70,left:55},{top:50,left:50},{top:30,left:55},{top:65,left:75},{top:35,left:75},{top:50,left:92}],'3-5-2':[{top:50,left:8},{top:75,left:28},{top:50,left:25},{top:25,left:28},{top:90,left:55},{top:70,left:50},{top:50,left:42},{top:30,left:50},{top:10,left:55},{top:65,left:85},{top:35,left:85}],'3-4-3':[{top:50,left:8},{top:75,left:28},{top:50,left:25},{top:25,left:28},{top:85,left:58},{top:65,left:52},{top:35,left:52},{top:15,left:58},{top:80,left:80},{top:50,left:90},{top:20,left:80}],'3-4-2-1':[{top:50,left:8},{top:75,left:28},{top:50,left:25},{top:25,left:28},{top:85,left:58},{top:65,left:50},{top:35,left:50},{top:15,left:58},{top:65,left:78},{top:35,left:78},{top:50,left:92}],'5-3-2':[{top:50,left:8},{top:75,left:28},{top:50,left:25},{top:25,left:28},{top:90,left:35},{top:10,left:35},{top:75,left:60},{top:50,left:55},{top:25,left:60},{top:65,left:85},{top:35,left:85}],'5-4-1':[{top:50,left:8},{top:90,left:28},{top:70,left:25},{top:50,left:22},{top:30,left:25},{top:10,left:28},{top:85,left:58},{top:60,left:52},{top:40,left:52},{top:15,left:58},{top:50,left:85}]};        this.svgIcons = {position:'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M7.646.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 1.707V5.5a.5.5 0 0 1-1 0V1.707L6.354 2.854a.5.5 0 1 1-.708-.708l2-2zM8 10a.5.5 0 0 1 .5.5v3.793l1.146-1.147a.5.5 0 0 1 .708.708l-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 0 1 .708-.708L7.5 14.293V10.5A.5.5 0 0 1 8 10zM.146 8.354a.5.5 0 0 1 0-.708l2-2a.5.5 0 1 1 .708.708L1.707 7.5H5.5a.5.5 0 0 1 0 1H1.707l1.147 1.146a.5.5 0 0 1-.708.708l-2-2zM10 8a.5.5 0 0 1 .5-.5h3.793l-1.147-1.146a.5.5 0 0 1 .708-.708l2 2a.5.5 0 0 1 0 .708l-2 2a.5.5 0 0 1-.708-.708L14.293 8.5H10.5A.5.5 0 0 1 10 8z"/></svg>',swap:'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1 11.5a.5.5 0 0 0 .5.5h11.793l-1.147 1.146a.5.5 0 0 0 .708.708l2-2a.5.5 0 0 0 0-.708l-2-2a.5.5 0 0 0-.708.708L13.293 11H1.5a.5.5 0 0 0-.5.5zm14-7a.5.5 0 0 1-.5.5H2.707l1.147 1.146a.5.5 0 1 1-.708.708l-2-2a.5.5 0 0 1 0-.708l2-2a.5.5 0 1 1 .708.708L2.707 4H14.5a.5.5 0 0 1 .5.5z"/></svg>'};
     },
 
     clonePanels() {
@@ -1474,13 +1518,13 @@ renderSubstitutes() {
         const subsContainer = this.els.mobile.subsArea;
         subsContainer.innerHTML = '';
 
-        // 「控え」ラベルを追加
+                // 「控え」ラベルを追加
         const label = document.createElement('div');
         label.textContent = '控え';
         label.style.cssText = `
             font-weight: bold; color: #868e96; font-size: 13px;
-            writing-mode: vertical-rl; text-align: center;
-            margin: auto 10px auto 5px; flex-shrink: 0;
+            display: flex; align-items: center; flex-shrink: 0;
+            padding-right: 10px;
         `;
         subsContainer.appendChild(label);
 
