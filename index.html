@@ -392,14 +392,32 @@ body.is-mobile #mode-toggle-btn { /* 既存のFABもモバイルで表示 */
 
 @media (max-width: 768px) {
 
+body.is-mobile .container {
+    display: block; /* PC用のflex設定を解除 */
+    padding: 0;
+    width: 100%;
+    max-width: 100%;
+}
 body.is-mobile .main-content {
-    display: flex; /* capture-areaをflexで伸ばすために必要 */
+    display: flex;
     flex-direction: column;
     flex-grow: 1;
     width: 100%;
+    min-width: 0; /* PC用の最小幅(400px)をここで解除します */
     min-height: 0;
     padding: 10px;
+    box-sizing: border-box; /* paddingを含めて幅を100%に収めます */
 }
+
+/* ▼▼▼ このコードを追加 ▼▼▼ */
+body.is-mobile .pc-ui-wrapper {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* flexアイテムのオーバーフローを防ぐため */
+}
+/* ▲▲▲ ここまで ▲▲▲ */
+
     .sub-player-chip.gk { background-color: var(--marker-gk-color); color: #333; }
 .sub-player-chip.df { background-color: var(--marker-df-color); }
 .sub-player-chip.mf { background-color: var(--marker-mf-color); }
@@ -441,14 +459,6 @@ body.is-mobile .main-content {
         outline: none;
     }
 
-    body.is-mobile .main-content { /* スマホではメインコンテンツがFlexboxの子になる */
-        display: flex;
-        flex-direction: column;
-        flex-grow: 1;
-        width: 100%;
-        min-height: 0; /* flex-growを正しく効かせるため */
-        padding: 10px;
-    }
 
     body.is-mobile #capture-area {
         flex-grow: 1;
@@ -561,7 +571,7 @@ body.is-mobile .main-content {
     .list-player-item { display: flex; flex-direction: column; align-items: center; cursor: grab; user-select: none; }
     .list-player-item.is-assigned { opacity: 0.4; cursor: not-allowed; }
     .list-player-marker {
-        width: 80px; height: 80px;
+        width: 30px; height: 30px;
         border-radius: 50%;
         box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         display: flex;
