@@ -682,6 +682,13 @@ body.is-mobile .main-content {
     .player-container.is-empty .player-name { display: none; }
     .player-container.is-empty .unassign-btn { display: none; }
 }
+
+        /* ドラッグ中の控え選手エリアのスタイル */
+        body.is-dragging-player.is-mobile #mobile-subs-area {
+            outline: 2px dashed var(--primary-color);
+            outline-offset: -4px;
+            background-color: #e9f5ff;
+        }
 /* --- END: スマホUI改善スタイル --- */
 /* --- END: スマートフォンUIスタイル --- */
     </style>
@@ -1421,12 +1428,22 @@ const App = {
         });
     },
 
-    renderSubstitutes() {
-        if (this.isMobile) {
-            const subsContainer = this.els.mobile.subsArea;
-            subsContainer.innerHTML = '';
+renderSubstitutes() {
+    if (this.isMobile) {
+        const subsContainer = this.els.mobile.subsArea;
+        subsContainer.innerHTML = '';
 
-            ['GK', 'DF', 'MF', 'FW'].forEach(pos => {
+        // 「控え」ラベルを追加
+        const label = document.createElement('div');
+        label.textContent = '控え';
+        label.style.cssText = `
+            font-weight: bold; color: #868e96; font-size: 13px;
+            writing-mode: vertical-rl; text-align: center;
+            margin: auto 10px auto 5px; flex-shrink: 0;
+        `;
+        subsContainer.appendChild(label);
+
+        ['GK', 'DF', 'MF', 'FW'].forEach(pos => {
                 const categoryEl = document.createElement('div');
                 categoryEl.className = 'sub-category-mobile';
                 categoryEl.innerHTML = `<span class="sub-category-mobile-label">${pos}</span>`;
@@ -1496,61 +1513,61 @@ const App = {
 		const player = this.state.squad.find(p => p.id === data.playerId);
 		if (!player) return;
 
-		if (e.type === 'touchstart') {
-			e.preventDefault(); 
-			
-			const draggedEl = e.currentTarget; 
-			
-			if (this.state.config.dragMode === 'position' && data.type === 'pitch') {
-				const touch = e.touches[0];
-				const simulatedMouseEvent = new MouseEvent('mousedown', {
-					bubbles: true,
-					cancelable: true,
-					clientX: touch.clientX,
-					clientY: touch.clientY
-				});
-				draggedEl.querySelector('.player-marker').dispatchEvent(simulatedMouseEvent);
-				return;
-			}
+		
+document.body.classList.add('is-dragging-player');
 
-			draggedEl.style.transition = 'none'; 
-			draggedEl.style.zIndex = '2000';     
-			draggedEl.style.opacity = '0.7';     
+if (e.type === 'touchstart') {
+    e.preventDefault();
+    const draggedEl = e.currentTarget;
 
-			const touch = e.touches[0];
-			const rect = draggedEl.getBoundingClientRect();
-			const offsetX = touch.clientX - rect.left;
-			const offsetY = touch.clientY - rect.top;
+    if (this.state.config.dragMode === 'position' && data.type === 'pitch') {
+        const touch = e.touches[0];
+        const simulatedMouseEvent = new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: touch.clientX, clientY: touch.clientY });
+        draggedEl.querySelector('.player-marker').dispatchEvent(simulatedMouseEvent);
+        return;
+    }
 
-			const updatePosition = (touchEvent) => {
-				const currentTouch = touchEvent.touches[0];
-				draggedEl.style.position = 'absolute';
-				draggedEl.style.left = `${currentTouch.pageX - offsetX}px`;
-				draggedEl.style.top = `${currentTouch.pageY - offsetY}px`;
-			};
+    const ghostEl = draggedEl.cloneNode(true);
+    ghostEl.style.transition = 'none';
+    ghostEl.style.position = 'absolute';
+    ghostEl.style.zIndex = '2100';
+    ghostEl.style.opacity = '0.8';
+    ghostEl.style.pointerEvents = 'none';
+    document.body.appendChild(ghostEl);
 
-			updatePosition(e);
+    if (data.type === 'pitch') {
+        draggedEl.style.opacity = '0.4';
+    } else {
+        draggedEl.style.visibility = 'hidden';
+    }
 
-			document.addEventListener('touchmove', updatePosition);
-			
-			document.addEventListener('touchend', (endEvent) => {
-				document.removeEventListener('touchmove', updatePosition);
-				
-				draggedEl.style.display = 'none';
-				const dropTarget = document.elementFromPoint(endEvent.changedTouches[0].clientX, endEvent.changedTouches[0].clientY);
-				
-				const customDropEvent = new Event('drop', { bubbles: true });
-				customDropEvent.dataTransfer = {
-					getData: () => JSON.stringify(data)
-				};
-				dropTarget?.dispatchEvent(customDropEvent);
-				
-				this.renderAll(); 
-				this.handleDragEnd();
+    const touch = e.touches[0];
+    const rect = draggedEl.getBoundingClientRect();
+    const offsetX = touch.clientX - rect.left;
+    const offsetY = touch.clientY - rect.top;
 
-			}, { once: true });
+    const updatePosition = (touchEvent) => {
+        const currentTouch = touchEvent.touches[0];
+        ghostEl.style.left = `${currentTouch.pageX - offsetX}px`;
+        ghostEl.style.top = `${currentTouch.pageY - offsetY}px`;
+    };
+    updatePosition(e);
 
-		} else {
+    document.addEventListener('touchmove', updatePosition);
+    document.addEventListener('touchend', (endEvent) => {
+        document.removeEventListener('touchmove', updatePosition);
+        ghostEl.style.display = 'none';
+        const dropTarget = document.elementFromPoint(endEvent.changedTouches[0].clientX, endEvent.changedTouches[0].clientY);
+        ghostEl.remove();
+        
+        const customDropEvent = new Event('drop', { bubbles: true });
+        customDropEvent.dataTransfer = { getData: () => JSON.stringify(data) };
+        dropTarget?.dispatchEvent(customDropEvent);
+        this.renderAll();
+        this.handleDragEnd();
+    }, { once: true });
+
+} else {
 			const ghostEl = this.els.dragGhost;
 			ghostEl.innerHTML = `<span class="num">${player.number}</span><span class="name">${player.name}</span>`;
 			e.dataTransfer.setData('application/json', JSON.stringify(data));
@@ -1565,21 +1582,22 @@ const App = {
 		}
 	},
 
-    handleDragEnd(e) {
-        if (!this.isDraggingPlayer) return;
-        this.isDraggingPlayer = false;
+    // ▼▼▼ ここから書き換え ▼▼▼
+handleDragEnd(e) {
+    if (!this.isDraggingPlayer) return;
+    this.isDraggingPlayer = false;
+    document.body.classList.remove('is-dragging-player');
 
-        if (this.isMobile) {
-            this.els.mobile.unassignBumper.classList.remove('is-visible', 'is-droppable');
-            
-            if (this._lastDragStartType === 'list') {
-                setTimeout(() => {
-                    this.els.mobile.playerListPanel.classList.add('is-open');
-                }, 100); 
-            }
+    if (this.isMobile) {
+        this.els.mobile.unassignBumper.classList.remove('is-visible', 'is-droppable');
+
+        if (this._lastDragStartType === 'list') {
+            this.els.mobile.playerListPanel.classList.remove('is-open');
         }
-        this._lastDragStartType = null;
-    },
+    }
+    this._lastDragStartType = null;
+},
+// ▲▲▲ ここまで書き換え ▲▲▲
 
     handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drop-target-hover'); },
     handleDragLeave(e) { e.currentTarget.classList.remove('drop-target-hover'); },
