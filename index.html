@@ -1431,26 +1431,41 @@ const App = {
                 if (!isAssigned) {
                     itemEl.draggable = true;
 
-                    let touchStartX, touchStartY;
+                                         let longPressTimer;
                     let hasMoved = false;
+                    let touchStartX, touchStartY;
 
                     const handleTouchStart = (e) => {
+                        // ▼▼▼ ここから修正 ▼▼▼
+                        const targetElement = e.currentTarget; // 先に要素を保持しておく
                         hasMoved = false;
                         const touch = e.touches[0];
                         touchStartX = touch.clientX;
                         touchStartY = touch.clientY;
-                        this.handleDragStart(e, { type: 'list', playerId: player.id });
+                        
+                        // 300ミリ秒後にドラッグを開始するタイマーをセット
+                        longPressTimer = setTimeout(() => {
+                            if (navigator.vibrate) navigator.vibrate(50); // 短い振動でフィードバック
+                            // 保持しておいた要素を引数で渡す
+                            this.handleDragStart(e, { type: 'list', playerId: player.id }, targetElement); 
+                        }, 300);
+                        // ▲▲▲ ここまで修正 ▲▲▲
                     };
 
                     const handleTouchMove = (e) => {
+                        // 指が少しでも動いたら、長押し判定をキャンセルしてスクロールを優先
+                        clearTimeout(longPressTimer);
                         const touch = e.touches[0];
-                        if (Math.abs(touch.clientX - touchStartX) > 5 || Math.abs(touch.clientY - touchStartY) > 5) {
+                        if (Math.abs(touch.clientX - touchStartX) > 10 || Math.abs(touch.clientY - touchStartY) > 10) {
                             hasMoved = true;
                         }
                     };
 
                     const handleTouchEnd = (e) => {
+                        // 指を離した時点で、長押し判定をキャンセル
+                        clearTimeout(longPressTimer);
                         if (!hasMoved) {
+                            // スワイプされていなければ（＝タップなら）編集モーダルを開く
                             this.openEditModal(player.id);
                         }
                     };
@@ -1581,7 +1596,7 @@ renderSubstitutes() {
         });
     },
 
-	handleDragStart(e, data) {
+		handleDragStart(e, data, element = null) { // ← 引数を追加
 		if (this.isMobile) {
 			this.els.mobile.unassignBumper.classList.add('is-visible');
 			if (data.type === 'list') {
@@ -1600,7 +1615,7 @@ document.body.classList.add('is-dragging-player');
 
 if (e.type === 'touchstart') {
     e.preventDefault();
-    const draggedEl = e.currentTarget;
+    const draggedEl = element || e.currentTarget; // ← この行を修正
 
     if (this.state.config.dragMode === 'position' && data.type === 'pitch') {
         const touch = e.touches[0];
