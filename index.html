@@ -1241,7 +1241,7 @@ const App = {
         localStorage.setItem("xisyncAppState", JSON.stringify(this.state));
     },
 
-    loadState() {
+        loadState() {
         const savedStateJSON = localStorage.getItem("xisyncAppState");
         if (savedStateJSON) {
             try {
@@ -1711,7 +1711,7 @@ handleDragEnd(e) {
         this.renderAll();
     },
 
-    handleDropOnSubZone(e, mobilePosCategory = null) {
+        handleDropOnSubZone(e, mobilePosCategory = null) {
         e.preventDefault(); e.stopPropagation();
         e.currentTarget.classList.remove('drop-target-hover');
 
@@ -1721,7 +1721,7 @@ handleDragEnd(e) {
 
             if (player) {
                 this.unassignPlayer(data.playerId);
-                const targetCategory = player.posCategory; 
+                const targetCategory = player.posCategory || 'FW'; // ← この行を修正
                 
                 if (!this.state.substitutes[targetCategory]) {
                     this.state.substitutes[targetCategory] = [];
@@ -2049,6 +2049,12 @@ handleDragEnd(e) {
 
     processImport(data) {
         if (this.isValidSquad(data)) {
+            // posCategoryがない古いデータ形式に対応
+            data.forEach(player => {
+                if (!player.posCategory) {
+                    player.posCategory = 'FW';
+                }
+            });
             this.showImportConfirmation(data);
         } else {
             alert('無効なデータ形式です。');
