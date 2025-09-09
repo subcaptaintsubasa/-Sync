@@ -1682,6 +1682,7 @@ if (e.type === 'touchstart') {
     e.preventDefault();
     const draggedEl = element || e.currentTarget;
 
+    // マーカー移動モードの処理は変更しません
     if (this.state.config.dragMode === 'position' && data.type === 'pitch') {
         const touch = e.touches[0];
         const simulatedMouseEvent = new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: touch.clientX, clientY: touch.clientY });
@@ -1689,31 +1690,35 @@ if (e.type === 'touchstart') {
         return;
     }
 
-        const ghostEl = draggedEl.cloneNode(true);
-    if(data.type === 'list') {
-        ghostEl.classList.add('is-drag-ghost-mobile');
-    }
-
-    const nameEl = ghostEl.querySelector('.list-player-name') || ghostEl.querySelector('.player-name');
-    if(nameEl) nameEl.textContent = player.name;
-
+    // ▼▼▼ ここからが変更箇所です ▼▼▼
+    // ドラッグ元の見た目に関わらず、統一されたデザインのゴースト要素を新しく生成します
+    const role = (player.posCategory || 'fw').toLowerCase();
+    const ghostEl = document.createElement('div');
+    ghostEl.className = 'list-player-item is-drag-ghost-mobile'; // 選手リスト用のゴーストスタイルを適用
+    ghostEl.innerHTML = `
+        <div class="list-player-marker ${role}">
+            <span class="list-player-number">${player.number}</span>
+            <span class="list-player-name">${player.name}</span>
+        </div>`;
+    
+    // ゴースト要素の基本的なスタイルを設定
     ghostEl.style.transition = 'none';
     ghostEl.style.position = 'absolute';
     ghostEl.style.zIndex = '2100';
     ghostEl.style.pointerEvents = 'none';
     document.body.appendChild(ghostEl);
 
+    // ドラッグ元の要素を一時的に非表示または半透明にします
     if (data.type === 'pitch') {
         draggedEl.style.opacity = '0.4';
     } else {
         draggedEl.style.visibility = 'hidden';
     }
 
-        const touch = e.touches[0];
-    const rect = draggedEl.getBoundingClientRect();
-    // どの要素でもマーカーの中心(52px)が指の中心に来るようにオフセットを計算
-    const offsetX = 52 / 2;
-    const offsetY = 52 / 2;
+    // 指で触れている位置に、ゴーストのマーカーの中心が来るように座標を計算します
+    const markerSize = 52; // CSSで指定されているゴーストのマーカーサイズ
+    const offsetX = markerSize / 2;
+    const offsetY = markerSize / 2;
 
     const updatePosition = (touchEvent) => {
         const currentTouch = touchEvent.touches[0];
@@ -1721,7 +1726,9 @@ if (e.type === 'touchstart') {
         ghostEl.style.top = `${currentTouch.pageY - offsetY}px`;
     };
     updatePosition(e);
+    // ▲▲▲ ここまでが変更箇所です ▲▲▲
 
+    // ドラッグ中とドラッグ終了時の処理（ここは変更ありません）
     document.addEventListener('touchmove', updatePosition);
     document.addEventListener('touchend', (endEvent) => {
         document.removeEventListener('touchmove', updatePosition);
