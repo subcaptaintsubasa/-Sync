@@ -138,8 +138,70 @@
         .player-list-item:hover .edit-player-btn { opacity: 1; }
         .edit-player-btn:hover { color: var(--primary-color); }
         
-        .drag-ghost { position: absolute; left: -1000px; background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 2100; border-radius: 15px; padding: 5px 10px; font-size: 14px; display: inline-flex; align-items: center; }
-        .drag-ghost .num { font-weight: bold; margin-right: 8px; }
+                /* ▼▼▼ ここから修正 ▼▼▼ */
+                .drag-ghost {
+            position: absolute;
+            left: -1000px; /* 初期位置は画面外 */
+            z-index: 2100;
+            display: flex;
+            flex-direction: column-reverse; /* ← この行を修正 (マーカーが上に、名前が下にくるのを反転) */
+            align-items: center;
+            pointer-events: none; /* マウスイベントを透過させる */
+        }
+        .drag-ghost .name {
+            background-color: rgba(0, 0, 0, 0.75);
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 12px;
+            margin-top: 6px; /* ← margin-bottom から変更 */
+            white-space: nowrap; /* 名前が改行されないように */
+        }
+        .drag-ghost .num {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 22px;
+            font-weight: bold;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+            border: 2px solid white;
+        }
+
+                /* スマホ用のドラッグゴーストスタイル */
+        .list-player-item.is-drag-ghost-mobile {
+            opacity: 0.9;
+            position: relative; /* ← この行を追加 */
+        }
+        .list-player-item.is-drag-ghost-mobile .list-player-marker {
+            width: 52px;
+            height: 52px;
+        }
+        .list-player-item.is-drag-ghost-mobile .list-player-number {
+            font-size: 22px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .list-player-item.is-drag-ghost-mobile .list-player-name {
+            display: block; /* 名前を常に表示 */
+            position: absolute;
+            bottom: 100%; /* マーカーの上部に配置 */
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 6px;
+            background-color: rgba(0, 0, 0, 0.75);
+            color: white;
+            font-size: 14px;
+            padding: 5px 10px;
+            border-radius: 12px;
+            white-space: nowrap;
+        }
+        /* ▲▲▲ ここまで追加 ▲▲▲ */
 
         #substitutes-container { display: flex; flex-direction: column; gap: 10px; }
         .sub-category { display: flex; align-items: flex-start; gap: 8px; }
@@ -989,8 +1051,11 @@ body.is-mobile .pc-ui-wrapper {
         </div>
     </div>
     
-    <div class="drag-ghost" id="drag-ghost"></div>
-
+    <div class="drag-ghost" id="drag-ghost">
+        <span class="num"></span>
+        <span class="name"></span>
+    </div>
+    
     <button id="mode-toggle-btn" class="mode-toggle-fab" title="マーカー操作モード切替"></button>
     <div id="mode-toast" class="mode-toast"></div>
 </div>
@@ -1615,7 +1680,7 @@ document.body.classList.add('is-dragging-player');
 
 if (e.type === 'touchstart') {
     e.preventDefault();
-    const draggedEl = element || e.currentTarget; // ← この行を修正
+    const draggedEl = element || e.currentTarget;
 
     if (this.state.config.dragMode === 'position' && data.type === 'pitch') {
         const touch = e.touches[0];
@@ -1624,11 +1689,17 @@ if (e.type === 'touchstart') {
         return;
     }
 
-    const ghostEl = draggedEl.cloneNode(true);
+        const ghostEl = draggedEl.cloneNode(true);
+    if(data.type === 'list') {
+        ghostEl.classList.add('is-drag-ghost-mobile');
+    }
+
+    const nameEl = ghostEl.querySelector('.list-player-name') || ghostEl.querySelector('.player-name');
+    if(nameEl) nameEl.textContent = player.name;
+
     ghostEl.style.transition = 'none';
     ghostEl.style.position = 'absolute';
     ghostEl.style.zIndex = '2100';
-    ghostEl.style.opacity = '0.8';
     ghostEl.style.pointerEvents = 'none';
     document.body.appendChild(ghostEl);
 
@@ -1638,10 +1709,11 @@ if (e.type === 'touchstart') {
         draggedEl.style.visibility = 'hidden';
     }
 
-    const touch = e.touches[0];
+        const touch = e.touches[0];
     const rect = draggedEl.getBoundingClientRect();
-    const offsetX = touch.clientX - rect.left;
-    const offsetY = touch.clientY - rect.top;
+    // どの要素でもマーカーの中心(52px)が指の中心に来るようにオフセットを計算
+    const offsetX = 52 / 2;
+    const offsetY = 52 / 2;
 
     const updatePosition = (touchEvent) => {
         const currentTouch = touchEvent.touches[0];
@@ -1666,10 +1738,17 @@ if (e.type === 'touchstart') {
 
 } else {
 			const ghostEl = this.els.dragGhost;
-			ghostEl.innerHTML = `<span class="num">${player.number}</span><span class="name">${player.name}</span>`;
+            const numEl = ghostEl.querySelector('.num');
+			numEl.textContent = player.number;
+            const role = (player.posCategory || 'fw').toLowerCase();
+            numEl.style.backgroundColor = `var(--marker-${role}-color)`;
+            numEl.style.color = (role === 'gk') ? '#333' : 'white';
+
+			ghostEl.querySelector('.name').textContent = player.name;
 			e.dataTransfer.setData('application/json', JSON.stringify(data));
 			e.dataTransfer.effectAllowed = 'move';
-			e.dataTransfer.setDragImage(ghostEl, 15, 15);
+            // ゴースト要素の「マーカー部分」の中心をポインタに合わせる
+			e.dataTransfer.setDragImage(ghostEl, ghostEl.offsetWidth / 2, ghostEl.offsetHeight - (numEl.offsetHeight / 2));
 		}
 		
 		e.stopPropagation();
