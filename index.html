@@ -885,7 +885,7 @@ body.is-mobile .pc-ui-wrapper {
         </a>        <button id="mobile-hamburger-btn" class="mobile-fab">≡</button>
     </header>
         <div class="mobile-title-wrapper">
-        <input type="text" id="mobile-title-input" placeholder="スタメン予想">
+        <input type="text" id="mobile-title-input" placeholder="タイトルを入力">
     </div>
 
     <div id="mobile-player-list-panel">
@@ -930,7 +930,7 @@ body.is-mobile .pc-ui-wrapper {
         </div>
 
         <div class="main-content">
-            <input type="text" id="title-input" placeholder="スタメン予想">
+            <input type="text" id="title-input" placeholder="タイトルを入力">
             <div id="capture-area">
                 <div class="pitch-wrapper vertical" id="pitch-wrapper">
                     <div class="capture-title" id="capture-title"></div>
@@ -1127,7 +1127,7 @@ const App = {
     editingPlayerId: null,
     toastTimer: null,
     numberChangeInterval: null,
-    _importedSquadData: null,
+        _importedSquadData: null,
     sidebarHoverTimer: null,
 
     init() {
@@ -1249,11 +1249,13 @@ const App = {
         this.els.mobile.playerListBtn.addEventListener('click', () => {
             this.els.mobile.playerListPanel.classList.toggle('is-open');
         });
-        // パネルの外側をクリックしたら閉じるイベント
+       		// パネルの外側をクリックしたら閉じるイベント
 		document.addEventListener('click', (e) => {
 			const panel = this.els.mobile.playerListPanel;
-			// パネルが開いていて、かつクリックした場所がパネルの外かつボタンの外である場合
-			if (panel.classList.contains('is-open') && !panel.contains(e.target) && !this.els.mobile.playerListBtn.contains(e.target)) {
+            const isClickInsideModal = e.target.closest('.modal-overlay');
+
+			// パネルが開いていて、かつクリックした場所がパネル/ボタン/モーダルの「外側」である場合
+			if (panel.classList.contains('is-open') && !panel.contains(e.target) && !this.els.mobile.playerListBtn.contains(e.target) && !isClickInsideModal) {
 				panel.classList.remove('is-open');
 			}
 		});
@@ -1263,7 +1265,6 @@ const App = {
             this.els.editModal.nameInput.value = '';
             this.els.editModal.posSelect.value = 'FW';
             this.openModal(this.els.editModal.overlay);
-            this.els.mobile.playerListPanel.classList.remove('is-open'); // パネルを閉じる
         });
 
         // Formation Popover
@@ -2026,10 +2027,16 @@ handleDragEnd(e) {
         return score;
     },
 
-    openEditModal(playerId) {
+            openEditModal(playerId) {
         const player = this.state.squad.find(p => p.id === playerId);
         if (!player) return;
         this.editingPlayerId = playerId;
+
+        // PC表示の場合、モーダルを開く際にサイドバーをピン留め状態にする
+        if (!this.isMobile && !this.els.sidebar.el.classList.contains('is-pinned')) {
+            this.toggleSidebarPin(); // ピン留め状態をトグル（ONにする）
+        }
+        
         this.els.editModal.numberInput.value = player.number;
         this.els.editModal.nameInput.value = player.name;
         this.els.editModal.posSelect.value = player.posCategory || 'FW';
@@ -2314,9 +2321,18 @@ handleDragEnd(e) {
             this.closeSidebar();
         });
 
-        this.els.pinSidebarBtn.addEventListener('click', () => this.toggleSidebarPin());
-    },
+                this.els.pinSidebarBtn.addEventListener('click', () => this.toggleSidebarPin());
 
+        // [追加] サイドバーの外側をクリックしたら、ピン留めを解除して閉じる
+        document.addEventListener('click', (e) => {
+            const isClickInsideModal = e.target.closest('.modal-overlay');
+
+            if (sidebar.classList.contains('is-open') && !sidebar.contains(e.target) && !e.target.closest('.sidebar-handle') && !e.target.closest('#open-sidebar-btn') && !isClickInsideModal) {
+                // 強制的に閉じる(true)ことで、ピン留めも解除する
+                this.closeSidebar(true); 
+            }
+        });
+    },
     setupTouchSidebar() {
         const sidebar = this.els.sidebar.el;
         const handle = this.els.sidebarHandle;
@@ -2355,8 +2371,12 @@ handleDragEnd(e) {
         document.addEventListener('touchmove', dragMove, { passive: true });
         document.addEventListener('touchend', dragEnd);
 
-        document.addEventListener('click', (e) => {
-            if (sidebar.classList.contains('is-open') && !sidebar.contains(e.target) && !e.target.closest('.sidebar-handle') && !e.target.closest('#open-sidebar-btn')) {
+                document.addEventListener('click', (e) => {
+            // クリックされた場所がモーダルウィンドウの中かどうかを判定
+            const isClickInsideModal = e.target.closest('.modal-overlay');
+
+            // サイドバーが開いていて、かつクリック位置がサイドバー/ハンドル/ボタン/モーダルの「外側」の場合のみ閉じる
+            if (sidebar.classList.contains('is-open') && !sidebar.contains(e.target) && !e.target.closest('.sidebar-handle') && !e.target.closest('#open-sidebar-btn') && !isClickInsideModal) {
                 this.closeSidebar(true);
             }
         });
