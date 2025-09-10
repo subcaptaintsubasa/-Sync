@@ -26,11 +26,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
     <style>
         :root {
-            --pitch-bg: #539d56; --line-color: rgba(255, 255, 255, 0.6); --sidebar-bg: #f4f4f4;
-            --text-color: #333; --primary-color: #007bff; --secondary-color: #6c757d; --danger-color: #dc3545;
-            --marker-gk-color: #f39c12; --marker-df-color: #3498db;
-            --marker-mf-color: #2ecc71; --marker-fw-color: #e74c3c;
-        }
+    --pitch-bg: #539d56; --line-color: rgba(255, 255, 255, 0.6); --sidebar-bg: #f4f4f4;
+    --text-color: #333; --primary-color: #007bff; --secondary-color: #6c757d; --danger-color: #dc3545;
+    /* --- マーカー色を微調整 --- */
+    --marker-gk-color: #f1c40f; --marker-gk-shadow: #c8a205; /* 黄色 */
+    --marker-df-color: #3498db; --marker-df-shadow: #2173a8; /* 青色 */
+    --marker-mf-color: #2ecc71; --marker-mf-shadow: #209153; /* 緑色 */
+    --marker-fw-color: #e74c3c; --marker-fw-shadow: #b83325; /* 赤色 */
+}
 
         body {
             font-family: 'Helvetica Neue', 'Arial', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Meiryo', sans-serif;
@@ -102,8 +105,50 @@
         .player-container { position: absolute; display: flex; flex-direction: column; align-items: center; user-select: none; transform: translate(-50%, -50%); transition: top 0.3s ease, left 0.3s ease, transform 0.2s, box-shadow 0.2s; will-change: top, left, transform; border-radius: 50%; }
         .player-container.is-moving { cursor: move; z-index: 100; transform: translate(-50%, -50%) scale(1.15); transition: transform 0.2s, box-shadow 0.2s; } /* No position transition while moving */
         .player-container.drop-target-hover { transform: translate(-50%, -50%) scale(1.15); }
-        .player-marker { width: 52px; height: 52px; border-radius: 50%; box-shadow: 0 3px 6px rgba(0,0,0,0.3); display: flex; flex-direction: column; justify-content: center; align-items: center; color: #333; font-weight: bold; border: 2px solid rgba(0,0,0,0.2); box-sizing: border-box; touch-action: none; /* For smoother drag on touch */ }
-        [data-drag-mode="position"] .player-marker { cursor: grab; }
+/* デザイン案7の .player-marker スタイル全体を、以下のコードに置き換えます */
+
+.player-marker {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    /* 厚みの影と、地面に落ちる影を分離してよりリアルに */
+    box-shadow: 0 4px 0px var(--shadow-color, #999), /* JSで色が変わる厚み部分 */
+                0 8px 10px rgba(0,0,0,0.4);
+    border: 2px solid rgba(0,0,0,0.2);
+    box-sizing: border-box;
+    touch-action: none;
+    transition: all 0.15s cubic-bezier(.2, .8, .4, 1.2); /* 弾むようなアニメーション */
+}
+
+/* ポジションごとに、基本色と影色変数を設定 */
+.player-marker.gk { background-color: var(--marker-gk-color); --shadow-color: var(--marker-gk-shadow); color: #333; }
+.player-marker.df { background-color: var(--marker-df-color); --shadow-color: var(--marker-df-shadow); color: white; }
+.player-marker.mf { background-color: var(--marker-mf-color); --shadow-color: var(--marker-mf-shadow); color: white; }
+.player-marker.fw { background-color: var(--marker-fw-color); --shadow-color: var(--marker-fw-shadow); color: white; }
+
+/* ▼ ドラッグ中のアニメーションを改良 ▼ */
+.player-container.is-moving .player-marker {
+    transform: translateY(-5px) scale(1.1) rotateZ(-3deg); /* 少し浮き上がり、傾く */
+    box-shadow: 0 2px 0px var(--shadow-color, #999), 
+                0 15px 20px rgba(0,0,0,0.3); /* 影も少し広がる */
+}
+
+/* 内側のリングを追加 (少し控えめな半透明に) */
+.player-marker::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px; right: 3px; bottom: 3px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    pointer-events: none;
+}
+/* ▲ ここまで置き換え ▲ */        [data-drag-mode="position"] .player-marker { cursor: grab; }
         [data-drag-mode="swap"] .player-marker { cursor: pointer; }
         .player-marker.gk { background-color: var(--marker-gk-color); } .player-marker.df { background-color: var(--marker-df-color); color: white; }
         .player-marker.mf { background-color: var(--marker-mf-color); color: white; } .player-marker.fw { background-color: var(--marker-fw-color); color: white; }
