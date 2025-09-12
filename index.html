@@ -25,6 +25,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
     <style>
+    /* --- ボタン等のタップ/クリック時の青い枠を消す --- */
+button, a, input, select, textarea {
+    -webkit-tap-highlight-color: transparent; /* スマホでのタップ時のハイライトを消す */
+    outline: none; /* クリック/フォーカス時の青い枠を消す */
+}
+
         :root {
     --pitch-bg: #539d56; --line-color: rgba(255, 255, 255, 0.6); --sidebar-bg: #f4f4f4;
     --text-color: #333; --primary-color: #007bff; --secondary-color: #6c757d; --danger-color: #dc3545;
