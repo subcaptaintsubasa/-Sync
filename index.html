@@ -2110,65 +2110,109 @@ handleDragEnd(e) {
         this.toastTimer = setTimeout(() => { this.els.modeToast.classList.remove('show'); }, 1500);
     },
     
-    saveImage() {
+    async saveImage() {
+        // 控え選手の人数チェック
         const allSubs = Object.values(this.state.substitutes).flat();
         if (allSubs.length > 9) {
-            const proceed = confirm(
-                `警告：控え選手の人数が9人を超えています（現在 ${allSubs.length}人）。\n公式ルールでは認められていませんが、このまま画像を保存しますか？`
-            );
+            const proceed = confirm(`警告：控え選手の人数が9人を超えています（現在 ${allSubs.length}人）。\n公式ルールでは認められていませんが、このまま処理を続けますか？`);
             if (!proceed) {
                 this.closeAllModals();
                 return;
             }
         }
+        
+        // 描画用のクローン要素を準備
         const originalArea = document.getElementById('capture-area');
         const cloneArea = originalArea.cloneNode(true);
         cloneArea.style.position = 'absolute';
         cloneArea.style.left = '-9999px';
         cloneArea.style.top = '0px';
-        cloneArea.style.width = '800px';
+        cloneArea.style.width = '800px'; // 高解像度化のため
         document.body.appendChild(cloneArea);
 
+        // 控え選手リストをHTMLに変換
         let subsHTML = '';
         ['GK', 'DF', 'MF', 'FW'].forEach(pos => {
-            const playersInPos = (this.state.substitutes[pos] || [])
-                .map(id => this.state.squad.find(p => p.id === id))
-                .filter(Boolean);
-            
+            const playersInPos = (this.state.substitutes[pos] || []).map(id => this.state.squad.find(p => p.id === id)).filter(Boolean);
             if (playersInPos.length > 0) {
                 const names = playersInPos.map(p => `${p.number} ${p.name}`).join(' / ');
                 subsHTML += `<div class="subs-pos-group"><span class="pos-label">${pos}:</span><span class="names">${names}</span></div>`;
             }
         });
-
         const captureSubs = cloneArea.querySelector('#capture-subs');
         if (captureSubs) {
             captureSubs.innerHTML = subsHTML ? `<h4>SUBSTITUTES</h4><div class="subs-grid">${subsHTML}</div>` : '';
         }
-
-        const captureTitle = cloneArea.querySelector('#capture-title');
+        
+        // タイトルを設定
         const titleInput = this.isMobile ? this.els.mobile.titleInput : this.els.titleInput;
+        const title = titleInput.value.trim() || titleInput.placeholder;
+        const captureTitle = cloneArea.querySelector('#capture-title');
         if (captureTitle) {
-            captureTitle.textContent = titleInput.value || titleInput.placeholder;
+            captureTitle.textContent = title;
             captureTitle.style.display = 'block';
         }
-        
+
+        // ウォーターマークを設定
         const watermark = cloneArea.querySelector('#capture-watermark');
-        if (watermark) {
-            watermark.textContent = "Created with XISync";
-        }
+        if (watermark) watermark.textContent = "Created with XISync";
         
         cloneArea.classList.add('is-capturing');
 
-        html2canvas(cloneArea, { backgroundColor: '#4a8d4d', scale: 3 }).then(canvas => {
-            const link = document.createElement('a');
-            const fileName = (titleInput.value || 'tactical-canvas').replace(/[\\/:"*?<>|]/g, '').replace(/\s+/g, '_');
-            link.download = `${fileName}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        }).finally(() => {
+        try {
+            const canvas = await html2canvas(cloneArea, { backgroundColor: '#4a8d4d', scale: 3 });
+            const fileName = (titleInput.value || 'tactical-canvas').replace(/[\\/:"*?<>|]/g, '').replace(/\s+/g, '_') + '.png';
+            
+            // ▼▼▼ ここから修正 ▼▼▼
+            // Web Share APIが利用可能か、かつBlob変換が可能かチェック
+            const canUseShareApi = navigator.canShare && canvas.toBlob;
+
+            // 保険機能：共有APIが使える場合、ユーザーに利用するか確認する
+            if (canUseShareApi && confirm('新しい共有機能を利用しますか？\n（キャンセルで従来のダウンロード）')) {
+                canvas.toBlob(async (blob) => {
+                    const file = new File([blob], fileName, { type: 'image/png' });
+                    const shareData = {
+                        files: [file],
+                        title: title,
+                        text: (titleInput.value.trim() ? `${titleInput.value.trim()}\n` : '') + '#XISync'
+                    };
+
+                    if (navigator.canShare(shareData)) {
+                        try {
+                            await navigator.share(shareData);
+                            this.closeAllModals();
+                        } catch (err) {
+                            if (err.name !== 'AbortError') { // ユーザーキャンセル以外のエラー
+                                console.error('Share failed:', err);
+                                alert('共有に失敗しました。ダウンロード機能を試してください。');
+                            }
+                        }
+                    } else {
+                        // データ形式が共有不可だった場合、ダウンロードにフォールバック
+                        alert('この形式は共有できませんでした。ダウンロードします。');
+                        this.downloadImage(canvas, fileName);
+                    }
+                }, 'image/png');
+            } else {
+                // APIが利用できない、またはユーザーがキャンセルした場合、ダウンロードにフォールバック
+                this.downloadImage(canvas, fileName);
+            }
+            // ▲▲▲ ここまで修正 ▲▲▲
+        } catch (err) {
+            console.error('Image generation failed:', err);
+            alert('画像の生成に失敗しました。');
+        } finally {
             document.body.removeChild(cloneArea);
-        });
+        }
+    },
+
+    // ダウンロード処理を別関数に分離
+    downloadImage(canvas, fileName) {
+        const link = document.createElement('a');
+        link.download = fileName;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        this.closeAllModals();
     },
     
     checkUrlForSquadData() {
