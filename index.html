@@ -878,6 +878,56 @@ body.is-mobile .pc-ui-wrapper {
     }
 }
 /* --- END: ロゴ画像差し替え準備スタイル --- */
+/* --- START: アクションシートのスタイル --- */
+#share-action-sheet {
+    align-items: flex-end; /* 画面下に配置 */
+    background: rgba(0,0,0,0.4);
+    z-index: 2500;
+}
+.action-sheet-content {
+    background: #f4f4f4;
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 10px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); /* スマホのノッチ対応 */
+    box-sizing: border-box;
+    transform: translateY(100%);
+    transition: transform 0.25s ease-out;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-radius: 16px 16px 0 0;
+}
+#share-action-sheet.is-open .action-sheet-content {
+    transform: translateY(0);
+}
+.action-sheet-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    background-color: #fff;
+    color: var(--primary-color);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    transition: background-color 0.2s;
+}
+.action-sheet-btn:active {
+    background-color: #e9e9e9;
+    transform: scale(1); /* 既存のボタン効果を無効化 */
+}
+.action-sheet-btn.cancel {
+    background-color: #fff;
+    color: var(--danger-color);
+    margin-top: 8px;
+}
+/* --- END: アクションシートのスタイル --- */
     </style>
 </head>
 <body data-layout-mode="vertical" data-drag-mode="swap">
@@ -995,7 +1045,17 @@ body.is-mobile .pc-ui-wrapper {
             </div>
         </aside>
     </div>
-
+    <div class="modal-overlay" id="share-action-sheet">
+        <div class="action-sheet-content">
+            <button id="action-sheet-share-btn" class="action-sheet-btn">
+                <span>アプリで共有</span>
+            </button>
+            <button id="action-sheet-save-btn" class="action-sheet-btn">
+                <span>端末に保存</span>
+            </button>
+            <button id="action-sheet-cancel-btn" class="action-sheet-btn cancel">キャンセル</button>
+        </div>
+    </div>
     <!-- Sidebar, Modals, FAB -->
     <div id="player-list-sidebar">
         <div class="sidebar-header">
@@ -1136,6 +1196,9 @@ const App = {
     numberChangeInterval: null,
         _importedSquadData: null,
     sidebarHoverTimer: null,
+        isIOS() {
+        return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    },
 
     init() {
         this.isMobile = window.innerWidth <= 768; 
@@ -1222,6 +1285,12 @@ const App = {
         };
         this.els.allModals = queryAll('.modal-overlay');
         this.els.allCloseBtns = queryAll('.modal-close-btn');
+                this.els.shareActionSheet = {
+            overlay: query('#share-action-sheet'),
+            shareBtn: query('#action-sheet-share-btn'),
+            saveBtn: query('#action-sheet-save-btn'),
+            cancelBtn: query('#action-sheet-cancel-btn')
+        };
     },
 
     defineConstants() {
@@ -2111,98 +2180,112 @@ handleDragEnd(e) {
     },
     
     async saveImage() {
-        const useShare = navigator.share && confirm('画像を共有しますか？\n（キャンセルでファイルにダウンロード）');
+        // --- 処理本体（画像生成と共有/保存） ---
+        const processImage = async (action) => {
+            // 描画用のクローン要素を準備
+            const originalArea = document.getElementById('capture-area');
+            const cloneArea = originalArea.cloneNode(true);
+            cloneArea.style.position = 'absolute';
+            cloneArea.style.left = '-9999px';
+            cloneArea.style.top = '0px';
+            cloneArea.style.width = '800px';
+            document.body.appendChild(cloneArea);
 
-        // 描画用のクローン要素を準備
-        // ... (中略: クローン要素の準備と情報描画のコードは変更なし) ...
-        const originalArea = document.getElementById('capture-area');
-        const cloneArea = originalArea.cloneNode(true);
-        cloneArea.style.position = 'absolute';
-        cloneArea.style.left = '-9999px';
-        cloneArea.style.top = '0px';
-        cloneArea.style.width = '800px';
-        document.body.appendChild(cloneArea);
-        let subsHTML = '';
-        ['GK', 'DF', 'MF', 'FW'].forEach(pos => {
-            const playersInPos = (this.state.substitutes[pos] || []).map(id => this.state.squad.find(p => p.id === id)).filter(Boolean);
-            if (playersInPos.length > 0) {
-                const names = playersInPos.map(p => `${p.number} ${p.name}`).join(' / ');
-                subsHTML += `<div class="subs-pos-group"><span class="pos-label">${pos}:</span><span class="names">${names}</span></div>`;
+            // 控え選手リストを描画
+            let subsHTML = '';
+            ['GK', 'DF', 'MF', 'FW'].forEach(pos => {
+                const playersInPos = (this.state.substitutes[pos] || []).map(id => this.state.squad.find(p => p.id === id)).filter(Boolean);
+                if (playersInPos.length > 0) {
+                    const names = playersInPos.map(p => `${p.number} ${p.name}`).join(' / ');
+                    subsHTML += `<div class="subs-pos-group"><span class="pos-label">${pos}:</span><span class="names">${names}</span></div>`;
+                }
+            });
+            const captureSubs = cloneArea.querySelector('#capture-subs');
+            if (captureSubs) {
+                captureSubs.innerHTML = subsHTML ? `<h4>SUBSTITUTES</h4><div class="subs-grid">${subsHTML}</div>` : '';
             }
-        });
-        const captureSubs = cloneArea.querySelector('#capture-subs');
-        if (captureSubs) {
-            captureSubs.innerHTML = subsHTML ? `<h4>SUBSTITUTES</h4><div class="subs-grid">${subsHTML}</div>` : '';
-        }
-        const titleInput = this.isMobile ? this.els.mobile.titleInput : this.els.titleInput;
-        const title = titleInput.value.trim() || titleInput.placeholder;
-        const captureTitle = cloneArea.querySelector('#capture-title');
-        if (captureTitle) {
-            captureTitle.textContent = title;
-            captureTitle.style.display = 'block';
-        }
-        const watermark = cloneArea.querySelector('#capture-watermark');
-        if (watermark) watermark.textContent = "Created with XISync";
-        cloneArea.classList.add('is-capturing');
 
+            // タイトルとウォーターマークを描画
+            const titleInput = this.isMobile ? this.els.mobile.titleInput : this.els.titleInput;
+            const title = titleInput.value.trim();
+            const captureTitle = cloneArea.querySelector('#capture-title');
+            if (captureTitle) {
+                captureTitle.textContent = title || "XISync Tactical Canvas";
+                captureTitle.style.display = 'block';
+            }
+            const watermark = cloneArea.querySelector('#capture-watermark');
+            if (watermark) watermark.textContent = "Created with XISync";
+            cloneArea.classList.add('is-capturing');
 
-        try {
-            const canvas = await html2canvas(cloneArea, { backgroundColor: '#4a8d4d', scale: 3 });
-            const fileName = (titleInput.value || 'tactical-canvas').replace(/[\\/:"*?<>|]/g, '').replace(/\s+/g, '_') + '.png';
-            
-            if (useShare && canvas.toBlob) {
-                canvas.toBlob(async (blob) => {
-                    const file = new File([blob], fileName, { type: 'image/png' });
-                    const text = (titleInput.value.trim() ? `${titleInput.value.trim()}\n` : '') + '#XISync ' + window.location.href.split('?')[0];
-                    
-                    // OSを判定
-                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
-                    if (isIOS) {
-                        // --- iOSの場合: クリップボード連携 ---
+            try {
+                const canvas = await html2canvas(cloneArea, { backgroundColor: '#4a8d4d', scale: 3 });
+                
+                if (action === 'share') {
+                    // --- アプリで共有 ---
+                    canvas.toBlob(async (blob) => {
+                        const file = new File([blob], "tactical-board.png", { type: 'image/png' });
                         try {
-                            // 画像のみを共有
-                            await navigator.share({ files: [file], title: title });
-                            // テキストをクリップボードにコピー
-                            await navigator.clipboard.writeText(text);
-                            alert('画像を共有しました。\n定型文をクリップボードにコピーしましたので、投稿画面に貼り付けてください。');
+                            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                                await navigator.share({ files: [file] });
+                            } else {
+                                throw new Error('Cannot share files.');
+                            }
                         } catch (err) {
                             if (err.name !== 'AbortError') {
-                                console.error('iOS Share failed:', err);
-                                alert('共有に失敗しました。');
+                                console.error('Share failed:', err);
+                                alert('共有機能が利用できませんでした。');
+                                this.downloadImage(canvas, generateFilename(title)); // フォールバックとしてダウンロード
                             }
                         }
-                    } else {
-                        // --- Android (およびその他) の場合: try-catchフォールバック ---
-                        try {
-                            // まず画像＋テキストの理想形で試す
-                            await navigator.share({ files: [file], title: title, text: text });
-                        } catch (err) {
-                             if (err.name === 'AbortError') { return; } // ユーザーキャンセル時は何もしない
-                            // 失敗したら、画像のみで再試行
-                            try {
-                                console.log('Sharing with text failed, falling back to file only.');
-                                await navigator.share({ files: [file], title: title });
-                            } catch (fallbackErr) {
-                                if (fallbackErr.name !== 'AbortError') {
-                                    console.error('Android Share fallback failed:', fallbackErr);
-                                    alert('共有に失敗しました。');
-                                }
-                            }
-                        }
-                    }
-                }, 'image/png');
-            } else {
-                // --- ダウンロード処理 ---
-                this.downloadImage(canvas, fileName);
+                    }, 'image/png');
+
+                } else if (action === 'save') {
+                    // --- 端末に保存 ---
+                    this.downloadImage(canvas, generateFilename(title));
+                }
+
+            } catch (err) {
+                console.error('Image generation failed:', err);
+                alert('画像の生成に失敗しました。');
+            } finally {
+                document.body.removeChild(cloneArea);
             }
-        } catch (err) {
-            console.error('Image generation or sharing failed:', err);
-            alert('処理中にエラーが発生しました。');
-        } finally {
-            document.body.removeChild(cloneArea);
-            this.closeAllModals();
+        };
+
+        // --- ファイル名生成ヘルパー ---
+        const generateFilename = (baseTitle) => {
+            const now = new Date();
+            const timestamp = `${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
+            const safeTitle = (baseTitle || 'tactical-canvas').replace(/[\\/:"*?<>|]/g, '').replace(/\s+/g, '_');
+            return `${safeTitle}_${timestamp}.png`;
+        };
+
+        // --- OSごとの処理分岐 ---
+        if (this.isIOS()) {
+            // 【iOSの場合】即座に共有処理を実行
+            await processImage('share');
+        } else {
+            // 【Android/PCの場合】アクションシートを表示
+            const sheet = this.els.shareActionSheet;
+            sheet.overlay.style.display = 'flex';
+            setTimeout(() => sheet.overlay.classList.add('is-open'), 10);
+
+            const closeSheet = () => {
+                sheet.overlay.classList.remove('is-open');
+                setTimeout(() => sheet.overlay.style.display = 'none', 300);
+            };
+
+            const shareHandler = async () => { closeSheet(); await processImage('share'); };
+            const saveHandler = async () => { closeSheet(); await processImage('save'); };
+            
+            sheet.shareBtn.onclick = shareHandler;
+            sheet.saveBtn.onclick = saveHandler;
+            sheet.cancelBtn.onclick = closeSheet;
+            sheet.overlay.onclick = (e) => {
+                if (e.target === sheet.overlay) closeSheet();
+            };
         }
+        
     },
 
     downloadImage(canvas, fileName) {
